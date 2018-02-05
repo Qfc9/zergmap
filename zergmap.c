@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
         This is my main function for decode.
     */
 
-    // Intializing Variables
+    // Initializing Variables
     FILE *fp;
     struct pcapFileH pHeader;
     struct pcapPacketH ppHeader;
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
                 skipAhead(fp, 1, "Invalid IPv4 Header", skipBytes);
                 continue;
             }
-            // Moving cursors foward if there are options
+            // Moving cursors forward if there are options
             else if(ipHeader.ihl > IHLDEFAULT)
             {
                 unsigned int ihl = ((ipHeader.ihl - IHLDEFAULT) * 4);
@@ -163,18 +163,9 @@ int main(int argc, char *argv[])
         // Printing the correct payload
         switch(getZType(&zHeader))
         {
-            case 0:
-                err = printZMessage(&zHeader, fp);
-                break;
-
             case 1:
                 err = printZStatus(&zHeader, fp);
                 break;
-
-            case 2:
-                err = printZCommand(&zHeader, fp);
-                break;
-
             case 3:
                 // Doesn't needs to take fp
                 err = printZGPS(&zHeader, fp);
@@ -188,8 +179,6 @@ int main(int argc, char *argv[])
         if(err)
         {
             fprintf(stderr, "An output error occurred, Skipping packet\n"); 
-            // fclose(fp);
-            // return 1;
         }
 
         // Reading any extra data 
