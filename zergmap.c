@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     int swap = 0;
     long int dataLength = 0;
     unsigned int skipBytes = 0;
-    graph theMaze = graphCreate();
+    graph zergGraph = graphCreate();
 
     // Checking for valid amount for args
     if(argc != 2)
@@ -175,10 +175,11 @@ int main(int argc, char *argv[])
 
                 if(setZGPS(fp, &gpsHead, sizeof(gpsHead)))
                 {
-                    return 1;
+                    err = 1;
+                    break;
                 }
 
-                graphAddNode(theMaze, 2, 2, gpsHead);
+                graphAddNode(zergGraph, gpsHead);
                 break;
 
             default:
@@ -200,8 +201,9 @@ int main(int argc, char *argv[])
 
     }
 
-    graphPrintNodes(theMaze);
+    graphPrintNodes(zergGraph);
     
     fclose(fp);
+    graphDestroy(zergGraph);
     return 0;
 }

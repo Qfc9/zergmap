@@ -17,11 +17,7 @@ void graphPrintNodes(graph g);
 
 graph           graphCreate(
     void);
-void            graphAddNode(
-    graph g,
-    size_t x,
-    size_t y,
-    struct gpsH gps);
+void graphAddNode(graph g, struct gpsH gps);
 void            graphPrint(
     graph g,
     char **map,
