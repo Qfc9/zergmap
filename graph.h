@@ -5,6 +5,7 @@
 #define BOTH 2
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct _graph *graph;
 

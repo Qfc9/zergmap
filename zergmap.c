@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "decode.h"
+#include "graph.h"
 
 // This is my main function
 int main(int argc, char *argv[])
