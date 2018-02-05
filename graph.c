@@ -18,6 +18,7 @@ struct _data
     size_t          x;
     size_t          y;
     char            value;
+    struct gpsH gps;
 } _data;
 
 struct _node
@@ -80,6 +81,7 @@ static void     _graphMakeEdges(
 static void     _graphEditMap(
     struct _stack *s,
     char **map);
+static void printNodes(struct _node *n);
 
 // Creating Graph
 graph
@@ -89,6 +91,23 @@ graphCreate(
     graph           g = calloc(1, sizeof(*g));
 
     return g;
+}
+
+void graphPrintNodes(graph g)
+{
+    printNodes(g->nodes);
+}
+
+static void printNodes(struct _node *n)
+{
+    if(!n)
+    {
+        return;
+    }
+
+    printf("Node: %lf\n", n->data.gps.longitude);
+
+    printNodes(n->next);
 }
 
 // Printing the graph
@@ -218,7 +237,7 @@ graphAddNode(
     graph g,
     size_t x,
     size_t y,
-    char value)
+    struct gpsH gps)
 {
     if (!g)
     {
@@ -236,7 +255,7 @@ graphAddNode(
 
         g->nodes->data.x = x;
         g->nodes->data.y = y;
-        g->nodes->data.value = value;
+        g->nodes->data.gps = gps;
         g->nodes->visited = false;
         g->nodes->weight = INITWEIGHT;
         g->nodes->parent = NULL;
@@ -248,7 +267,7 @@ graphAddNode(
 
     newNode->data.x = x;
     newNode->data.y = y;
-    newNode->data.value = value;
+    newNode->data.gps = gps;
     newNode->visited = false;
     newNode->weight = INITWEIGHT;
     newNode->parent = NULL;

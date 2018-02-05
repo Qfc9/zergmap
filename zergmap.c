@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
     int swap = 0;
     long int dataLength = 0;
     unsigned int skipBytes = 0;
+    graph theMaze = graphCreate();
 
     // Checking for valid amount for args
     if(argc != 2)
@@ -160,6 +161,8 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        struct gpsH gpsHead;
+
         // Printing the correct payload
         switch(getZType(&zHeader))
         {
@@ -168,7 +171,14 @@ int main(int argc, char *argv[])
                 break;
             case 3:
                 // Doesn't needs to take fp
-                err = printZGPS(&zHeader, fp);
+                //err = printZGPS(&zHeader, fp);
+
+                if(setZGPS(fp, &gpsHead, sizeof(gpsHead)))
+                {
+                    return 1;
+                }
+
+                graphAddNode(theMaze, 2, 2, gpsHead);
                 break;
 
             default:
@@ -189,6 +199,8 @@ int main(int argc, char *argv[])
         }
 
     }
+
+    graphPrintNodes(theMaze);
     
     fclose(fp);
     return 0;

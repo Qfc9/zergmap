@@ -7,9 +7,13 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "zergHeaders.h"
+
 typedef struct _graph *graph;
 
 struct _node;
+
+void graphPrintNodes(graph g);
 
 graph           graphCreate(
     void);
@@ -17,7 +21,7 @@ void            graphAddNode(
     graph g,
     size_t x,
     size_t y,
-    char value);
+    struct gpsH gps);
 void            graphPrint(
     graph g,
     char **map,
