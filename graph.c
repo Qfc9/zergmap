@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include "graph.h"
+#include "zergPrint.h"
+#include "util.h"
 
 #define INITWEIGHT 1000000
 
@@ -16,7 +18,8 @@ struct _graph
 struct _data
 {
     struct statusH status;
-    struct gpsH gps;
+    struct gpsH gpsInfo;
+    struct GPS gps;
 } _data;
 
 struct _node
@@ -65,10 +68,7 @@ static void     _graphDestoryEdges(
 //     struct _stack *s);
 // static void     _graphResetNodes(
 //     struct _node *n);
-// static struct _node *_graphFind(
-//     struct _node *n,
-//     size_t x,
-//     size_t y);
+// static struct _node *_graphFind(struct _node *n, struct GPS *gps);
 // static void     _graphMakePath(
 //     struct _stack *s,
 //     struct _node *n);
@@ -80,6 +80,7 @@ static void     _graphDestoryEdges(
 //     struct _stack *s,
 //     char **map);
 static void printNodes(struct _node *n);
+static void printEdges(struct _edge *e);
 
 // Creating Graph
 graph
@@ -103,9 +104,24 @@ static void printNodes(struct _node *n)
         return;
     }
 
-    printf("Node: %lf\n", n->data.gps.longitude);
+    printf("LA: %lf LO: %lf\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
+
+    printEdges(n->edges);
 
     printNodes(n->next);
+}
+
+static void printEdges(struct _edge *e)
+{
+    if(!e)
+    {
+        printf("\n");
+        return;
+    }
+
+    printf("E[%zu] (%.1lf, %.1lf)\t", e->weight, e->node->data.gpsInfo.latitude, e->node->data.gpsInfo.longitude);
+
+    printEdges(e->next);
 }
 
 // // Printing the graph
@@ -231,7 +247,7 @@ static void printNodes(struct _node *n)
 
 // Adding a node to the graph
 void
-graphAddNode(graph g, struct gpsH gps)
+graphAddNode(graph g, struct gpsH gpsInfo)
 {
     if (!g)
     {
@@ -247,7 +263,10 @@ graphAddNode(graph g, struct gpsH gps)
             return;
         }
 
-        g->nodes->data.gps = gps;
+        setGPSDMS(&gpsInfo.latitude, &g->nodes->data.gps.lat);
+        setGPSDMS(&gpsInfo.longitude, &g->nodes->data.gps.lon);
+
+        g->nodes->data.gpsInfo = gpsInfo;
         g->nodes->visited = false;
         g->nodes->weight = INITWEIGHT;
         g->nodes->parent = NULL;
@@ -257,75 +276,69 @@ graphAddNode(graph g, struct gpsH gps)
     // Adding a new node on the chain
     struct _node   *newNode = calloc(1, sizeof(_node));
 
-    newNode->data.gps = gps;
+    setGPSDMS(&gpsInfo.latitude, &newNode->data.gps.lat);
+    setGPSDMS(&gpsInfo.longitude, &newNode->data.gps.lon);
+
+    newNode->data.gpsInfo = gpsInfo;
     newNode->visited = false;
     newNode->weight = INITWEIGHT;
     newNode->parent = NULL;
 
-    struct _node   *next = g->nodes;
+    struct _node   *curNode = g->nodes;
 
-    // Making sure we are at the last node on the chain
-    while (next->next)
+    printf("%lf\n", dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo));
+
+    if (0.015 > dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
     {
-        next = next->next;
+        graphAddEdge(newNode, curNode);
+        graphAddEdge(curNode, newNode);
     }
 
-    next->next = newNode;
+    // Making sure we are at the last node on the chain
+    while (curNode->next)
+    {
+        if (0.015 > dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
+        {
+            graphAddEdge(newNode, curNode);
+            graphAddEdge(curNode, newNode);
+        }
+        curNode = curNode->next;
+    }
+
+    curNode->next = newNode;
 }
+    
+// Adding an edge to the graph
+void graphAddEdge(struct _node *a, struct _node *b)
+{
+    if (!a || !b)
+    {
+        return;
+    }
 
-// // Adding an edge to the graph
-// void
-// graphAddEdge(
-//     graph g,
-//     size_t sX,
-//     size_t sY,
-//     size_t dX,
-//     size_t dY)
-// {
-//     if (!g || !g->nodes)
-//     {
-//         return;
-//     }
+    struct _edge   *newEdge = calloc(1, sizeof(*newEdge));
 
-//     // Finding the two nodes that need edges
-//     struct _node   *a = _graphFind(g->nodes, sX, sY);
-//     struct _node   *b = _graphFind(g->nodes, dX, dY);
+    // Setting weight based off the node value
+    newEdge->node = b;
+    newEdge->weight = 1;
 
-//     if (!a || !b)
-//     {
-//         return;
-//     }
+    if (!a->edges)
+    {
+        a->edges = newEdge;
+        return;
+    }
 
-//     struct _edge   *newEdge = calloc(1, sizeof(*newEdge));
+    struct _edge   *curEdge = a->edges;
 
-//     // Setting weight based off the node value
-//     newEdge->node = b;
-//     if (newEdge->node->data.value == '~')
-//     {
-//         newEdge->weight = 2;
-//     }
-//     else
-//     {
-//         newEdge->weight = 1;
-//     }
+    // Making sure the edge it set at the end of the edges
+    while (curEdge->next)
+    {
+        curEdge = curEdge->next;
+    }
 
-//     struct _edge   *curEdge = a->edges;
+    curEdge->next = newEdge;
 
-//     if (!a->edges)
-//     {
-//         a->edges = newEdge;
-//         return;
-//     }
-
-//     // Making sure the edge it set at the end of the edges
-//     while (curEdge->next)
-//     {
-//         curEdge = curEdge->next;
-//     }
-
-//     curEdge->next = newEdge;
-
-// }
+}
 
 // // Adding an edge to the graph
 // void
@@ -413,24 +426,25 @@ graphDestroy(
 //     _graphEditMap(s->next, map);
 // }
 
-// // Find a node based of it's x and y
-// static struct _node *
-// _graphFind(
-//     struct _node *n,
-//     size_t x,
-//     size_t y)
+// Find a node based of it's x and y
+// static struct _node *_graphFind(struct _node *n, struct GPS *gps)
 // {
 //     if (!n)
 //     {
 //         return NULL;
 //     }
 
-//     if (n->data.x == x && n->data.y == y)
+//     if (n->data.gps.lon.degrees == gps->lon.degrees && 
+//         n->data.gps.lon.minutes == gps->lon.minutes && 
+//         n->data.gps.lon.seconds == gps->lon.seconds && 
+//         n->data.gps.lat.degrees == gps->lat.degrees &&
+//         n->data.gps.lat.minutes == gps->lat.minutes &&
+//         n->data.gps.lat.seconds == gps->lat.seconds)
 //     {
 //         return n;
 //     }
 
-//     return _graphFind(n->next, x, y);
+//     return _graphFind(n->next, gps);
 // }
 
 

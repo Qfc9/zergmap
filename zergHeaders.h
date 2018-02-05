@@ -58,6 +58,19 @@ struct gpsH
 
 } gps;
 
+struct DMS
+{
+    unsigned int degrees;
+    unsigned int minutes;
+    unsigned int seconds;
+} DMS;
+
+struct GPS
+{
+    struct DMS lat;
+    struct DMS lon;
+};
+
 void setZergH(FILE *fp, union zergH *zHead, const char *msg);
 int setZGPS(FILE *fp, struct gpsH *gps, size_t length);
 int setZStatus(FILE *fp, struct statusH *status, size_t length);

@@ -182,11 +182,3 @@ void printZHeader(union zergH *zHead)
     printf("From    : %u\n", zHead->details.source);
     printf("To      : %u\n", zHead->details.destination);
 }
-
-// Making the double into Degs/Mins/Secs
-void setGPSDMS(double *direction, struct DMS *dms)
-{
-    dms->degrees = *direction;
-    dms->minutes = 60 * (*direction - dms->degrees);
-    dms->seconds = round(3600 * (*direction - dms->degrees) - 60 * dms->minutes);
-}

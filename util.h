@@ -3,6 +3,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stdbool.h>
+
 void safeRead(FILE *fp, void *readIt, size_t sz, const char *msg);
 void safeWrite(FILE *fp, void *writeIt, size_t sz, const char *msg);
 void skipAhead(FILE *fp, int err, const char *msg, int skip);
@@ -16,5 +18,8 @@ unsigned int u8BitSwap(unsigned int swapMe);
 void toLowerStr(char *str);
 void removeNonChar(char *str);
 int removeHeaderText(char *str);
+double dist(struct gpsH *a, struct gpsH *b);
+void setGPSDMS(double *direction, struct DMS *dms);
+bool cmpGps(struct GPS *a, struct GPS *b);
 
 #endif

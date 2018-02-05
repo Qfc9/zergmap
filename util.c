@@ -4,9 +4,54 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdbool.h>
+#include <math.h>
 
+#include "zergHeaders.h"
 #include "util.h"
+
+#define R (6371.0 / 2.0)
+#define TO_RAD (3.1415926536 / 180)
+
+double dist(struct gpsH *a, struct gpsH *b)
+{
+    double th1 = a->latitude;
+    double ph1 = a->longitude;
+    double th2 = b->latitude;
+    double ph2 = b->longitude;
+
+    double dx, dy, dz;
+    ph1 -= ph2;
+    ph1 *= TO_RAD, th1 *= TO_RAD, th2 *= TO_RAD;
+
+    dz = sin(th1) - sin(th2);
+    dx = cos(ph1) * cos(th1) - cos(th2);
+    dy = sin(ph1) * cos(th1);
+
+    return asin(sqrt(dx * dx + dy * dy + dz * dz) / 2) * 2 * R;
+}
+
+// Making the double into Degs/Mins/Secs
+void setGPSDMS(double *direction, struct DMS *dms)
+{
+    dms->degrees = *direction;
+    dms->minutes = 60 * (*direction - dms->degrees);
+    dms->seconds = round(3600 * (*direction - dms->degrees) - 60 * dms->minutes);
+}
+
+bool cmpGps(struct GPS *a, struct GPS *b)
+{
+    if (a->lon.degrees == b->lon.degrees && 
+        a->lon.minutes == b->lon.minutes && 
+        a->lon.seconds == b->lon.seconds && 
+        a->lat.degrees == b->lat.degrees &&
+        a->lat.minutes == b->lat.minutes &&
+        a->lat.seconds == b->lat.seconds)
+    {
+        return true;
+    }
+
+    return false;
+}
 
 void safeWrite(FILE *fp, void *writeIt, size_t sz, const char *msg)
 {

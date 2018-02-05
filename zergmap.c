@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     struct ipv6H ip6Header;
     struct udpH udpHeader;
     union zergH zHeader;
+    struct gpsH gpsHead;
     int err = 0;
     int swap = 0;
     long int dataLength = 0;
@@ -160,8 +161,6 @@ int main(int argc, char *argv[])
             skipAhead(fp, 1, "Invalid Zerg Version", skipBytes);
             continue;
         }
-
-        struct gpsH gpsHead;
 
         // Printing the correct payload
         switch(getZType(&zHeader))
