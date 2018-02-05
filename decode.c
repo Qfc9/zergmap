@@ -26,7 +26,7 @@ Example of useage below:
 
 #define MINPCAPLENGTH 54
 
-int main(int argc, char *argv[])
+int decode(int argc, char *argv[])
 {
     /*
         This is my main function for decode.

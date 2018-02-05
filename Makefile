@@ -7,7 +7,7 @@ DEBUG = -DDEBUG -g
 
 BINS = zergmap
 
-FILES = zergmap.o
+FILES = zergmap.o decode.o zergHeaders.o zergPrint.o netHeaders.o util.o
 
 all: build
 
