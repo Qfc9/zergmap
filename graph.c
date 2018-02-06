@@ -70,18 +70,11 @@ static void     _graphDestoryEdges(
 // static void     _graphResetNodes(
 //     struct _node *n);
 // static struct _node *_graphFind(struct _node *n, struct GPS *gps);
-// static void     _graphMakePath(
-//     struct _stack *s,
-//     struct _node *n);
-// static void     _graphMakeEdges(
-//     graph g,
-//     struct _node *curN,
-//     struct _node *topN);
-// static void     _graphEditMap(
-//     struct _stack *s,
-//     char **map);
+
 static void printNodes(struct _node *n);
 static void printEdges(struct _edge *e);
+static void _graphAddEdge(struct _node *a, struct _node *b);
+static void _graphValidEdge(struct _node *a, struct _node *b);
 
 // Creating Graph
 graph
@@ -126,127 +119,6 @@ static void printEdges(struct _edge *e)
     printEdges(e->next);
 }
 
-// // Printing the graph
-// void
-// graphPrint(
-//     graph g,
-//     char **map,
-//     size_t mapSz,
-//     char end)
-// {
-//     if (!g || !g->nodes)
-//     {
-//         return;
-//     }
-
-//     // Making a path stack
-//     struct _stack  *path = calloc(1, sizeof(*path));
-
-//     if (!path)
-//     {
-//         return;
-//     }
-
-//     // Setting the first stack item to the end result node
-//     path->node = _graphFindNode(g->nodes, end);
-//     if (path->node)
-//     {
-//         // Filling the stack with the result
-//         _graphMakePath(path, path->node->parent);
-//     }
-
-//     // Editing the map in memory based off the path
-//     _graphEditMap(path, map);
-
-//     // Printing the map
-//     for (size_t y = 0; y < mapSz; y++)
-//     {
-//         printf("%s\n", map[y]);
-//     }
-
-//     _freeStack(path);
-// }
-
-// // CHANGE ERRORS TO PRINT TO STDERR
-// bool
-// graphPrintPath(
-//     graph g,
-//     char **data,
-//     size_t sz,
-//     char start,
-//     char end,
-//     size_t search)
-// {
-//     // Initializing Variables
-//     bool            exists = false;
-
-//     struct _stack  *s = calloc(1, sizeof(*s));
-
-//     if (!s)
-//     {
-//         return exists;
-//     }
-
-//     struct _stack  *thePath = calloc(1, sizeof(*thePath));
-
-//     if (!thePath)
-//     {
-//         free(s);
-//         return exists;
-//     }
-
-//     // Making sure there is a start and end node
-//     if (!(s->node = _graphFindNode(g->nodes, start)) ||
-//         !_graphFindNode(g->nodes, end))
-//     {
-//         fprintf(stderr, "The starting or ending position is missing!\n");
-//         free(thePath);
-//         free(s);
-//         return exists;
-//     }
-
-//     // Doing DFS
-//     if (search == 0)
-//     {
-//         s->node->visited = true;
-//         thePath->node = s->node;
-
-//         exists = _graphDFS(s, thePath, s->node->edges, end);
-//     }
-//     // Doing Dijkstra
-//     else if (search == 1)
-//     {
-//         s->node->weight = 0;
-//         s->node->parent = NULL;
-
-//         _graphFastPath(s, s->node->edges);
-
-//         // Printing the graph
-//         graphPrint(g, data, sz, end);
-//     }
-//     // Doing Both
-//     else
-//     {
-//         if (graphPrintPath(g, data, sz, start, end, 0))
-//         {
-//             s->node->weight = 0;
-//             s->node->parent = NULL;
-
-//             _graphFastPath(s, s->node->edges);
-//         }
-
-//         // Printing the graph
-//         graphPrint(g, data, sz, end);
-//     }
-
-//     _freeStack(thePath);
-//     _freeStack(s);
-
-//     graphResetNodes(g);
-
-//     return exists;
-// }
-
 // Adding a node to the graph
 void graphAddNode(graph g, union zergH zHead, struct gpsH gps)
 {
@@ -289,31 +161,30 @@ void graphAddNode(graph g, union zergH zHead, struct gpsH gps)
 
     struct _node   *curNode = g->nodes;
 
-    // MODEIFY TO INCLUDE ALTITUDE!!!!!!!!!
-    // CHECK ZERG ID
-    if (15 >= dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
-    {
-        graphAddEdge(newNode, curNode);
-        graphAddEdge(curNode, newNode);
-    }
+   _graphValidEdge(newNode, curNode);
 
     // Making sure we are at the last node on the chain
     while (curNode->next)
     {
         curNode = curNode->next;
-        // MODEIFY TO INCLUDE ALTITUDE!!!!!!!!!
-        if (15 >= dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
-        {
-            graphAddEdge(newNode, curNode);
-            graphAddEdge(curNode, newNode);
-        }
+        _graphValidEdge(newNode, curNode);
     }
 
     curNode->next = newNode;
 }
-    
+
+static void _graphValidEdge(struct _node *a, struct _node *b)
+{
+    // ADD ALTITUDE@
+    if (15 >= dist(&a->data.gpsInfo, &b->data.gpsInfo))
+    {
+        _graphAddEdge(a, b);
+        _graphAddEdge(b, a);
+    }
+}
+
 // Adding an edge to the graph
-void graphAddEdge(struct _node *a, struct _node *b)
+static void _graphAddEdge(struct _node *a, struct _node *b)
 {
     if (!a || !b)
     {
