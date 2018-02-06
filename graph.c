@@ -14,6 +14,8 @@
 struct _graph
 {
     struct _node   *nodes;
+    size_t totalNodes;
+    size_t totalEdges;
 } _graph;
 
 struct _data
@@ -56,7 +58,7 @@ static void     _graphDestoryEdges(
     struct _edge *e);
 static struct _node *_graphFind(struct _node *n, unsigned int id);
 static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon);
-static void _graphFastPath(struct _stack *stack, struct _edge *edge);
+static void _graphFastPath(struct _stack *stack, struct _edge *edge, size_t *totalNodes);
 static void _graphResetNodes(struct _node *n);
 // static void     _freeStack(
 //     struct _stack *s);
@@ -71,11 +73,9 @@ static void _graphValidEdge(struct _node *a, struct _node *b);
 static void printFastest(struct _node *n);
 
 // Creating Graph
-graph
-graphCreate(
-    void)
+graph graphCreate(void)
 {
-    graph           g = calloc(1, sizeof(*g));
+    graph g = calloc(1, sizeof(*g));
 
     return g;
 }
@@ -91,6 +91,21 @@ void printStack(struct _stack *s)
     printStack(s->next);
 }
 
+void removeSingle(struct _node *n)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    if (n->edgeCount < 2)
+    {
+        printf("Remove zerg #%u\n", n->data.zHead.details.source);
+    }
+
+    removeSingle(n->next);
+}
+
 void graphPrintNodes(graph g)
 {
     struct _stack  *s = calloc(1, sizeof(*s));
@@ -101,22 +116,28 @@ void graphPrintNodes(graph g)
     }
 
     unsigned int id = 20210;
+    size_t totalNodes = 1;
 
     s->node = g->nodes;
     s->node->visited = true;
     s->node->weight = 0;
     s->node->parent = NULL;
-    _graphFastPath(s, s->node->edges);
+    _graphFastPath(s, s->node->edges, &totalNodes);
     printFastest(_graphFind(g->nodes, id));
 
-    graphResetNodes(g);
-    s->node->weight = 0;
-    s->node->parent = NULL;
-    _graphFastPath(s, s->node->edges);
+    // graphResetNodes(g);
+    // s->node->weight = 0;
+    // s->node->parent = NULL;
+    // _graphFastPath(s, s->node->edges);
 
-    printFastest(_graphFind(g->nodes, id));
+    // printFastest(_graphFind(g->nodes, id));
 
     printNodes(g->nodes);
+
+    if (totalNodes > 2)
+    {
+        removeSingle(g->nodes);
+    }
 
     free(s);
 }
@@ -381,7 +402,7 @@ static struct _node *_graphFind(struct _node *n, unsigned int id)
 // }
 
 // My Dijkstra algorithm
-static void _graphFastPath(struct _stack *stack, struct _edge *edge)
+static void _graphFastPath(struct _stack *stack, struct _edge *edge, size_t *totalNodes)
 {
     if (!edge || !stack)
     {
@@ -389,7 +410,7 @@ static void _graphFastPath(struct _stack *stack, struct _edge *edge)
     }
     if (!edge->active)
     {
-        _graphFastPath(stack, edge->next);
+        _graphFastPath(stack, edge->next, totalNodes);
         return;
     }
 
@@ -409,14 +430,19 @@ static void _graphFastPath(struct _stack *stack, struct _edge *edge)
             return;
         }
 
+        if((edge->node->weight - INITWEIGHT) >= 0.00)
+        {
+            (*totalNodes)++;
+        }
+
         // Adding stack data
         edge->node->weight = (stack->node->weight + edge->weight);
         edge->node->parent = stack->node;
         stack->next->node = edge->node;
 
-        _graphFastPath(stack->next, stack->next->node->edges);
+        _graphFastPath(stack->next, stack->next->node->edges, totalNodes);
 
-        _graphFastPath(stack, stack->node->edges);
+        _graphFastPath(stack, stack->node->edges, totalNodes);
 
     }
 
@@ -424,7 +450,7 @@ static void _graphFastPath(struct _stack *stack, struct _edge *edge)
     if (edge->next)
     {
         // Going to the next edge
-        _graphFastPath(stack, edge->next);
+        _graphFastPath(stack, edge->next, totalNodes);
     }
 }
 
