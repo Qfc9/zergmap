@@ -17,6 +17,7 @@ struct _graph
 
 struct _data
 {
+    union zergH zHead;
     struct statusH status;
     struct gpsH gpsInfo;
     struct GPS gps;
@@ -27,7 +28,7 @@ struct _node
     size_t edgeCount;
     struct _data data;
     bool visited;
-    size_t weight;
+    double weight;
     struct _node   *parent;
     struct _edge   *edges;
     struct _node   *next;
@@ -35,7 +36,7 @@ struct _node
 
 struct _edge
 {
-    size_t          weight;
+    double          weight;
     struct _node   *node;
     struct _edge   *next;
 } _edge;
@@ -104,7 +105,8 @@ static void printNodes(struct _node *n)
         return;
     }
 
-    printf("LA: %lf LO: %lf\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
+    //printf("%u\t", n->data.zHead.details.source);
+    printf("(%.4lf, %.4lf)\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
 
     printEdges(n->edges);
 
@@ -119,7 +121,7 @@ static void printEdges(struct _edge *e)
         return;
     }
 
-    printf("E[%zu] (%.1lf, %.1lf)\t", e->weight, e->node->data.gpsInfo.latitude, e->node->data.gpsInfo.longitude);
+    printf("E[%.1lf] (%.4lf, %.4lf)\t", e->weight, e->node->data.gpsInfo.latitude, e->node->data.gpsInfo.longitude);
 
     printEdges(e->next);
 }
@@ -246,8 +248,7 @@ static void printEdges(struct _edge *e)
 // }
 
 // Adding a node to the graph
-void
-graphAddNode(graph g, struct gpsH gpsInfo)
+void graphAddNode(graph g, union zergH zHead, struct gpsH gps)
 {
     if (!g)
     {
@@ -263,10 +264,11 @@ graphAddNode(graph g, struct gpsH gpsInfo)
             return;
         }
 
-        setGPSDMS(&gpsInfo.latitude, &g->nodes->data.gps.lat);
-        setGPSDMS(&gpsInfo.longitude, &g->nodes->data.gps.lon);
+        setGPSDMS(&gps.latitude, &g->nodes->data.gps.lat);
+        setGPSDMS(&gps.longitude, &g->nodes->data.gps.lon);
 
-        g->nodes->data.gpsInfo = gpsInfo;
+        g->nodes->data.gpsInfo = gps;
+        g->nodes->data.zHead = zHead;
         g->nodes->visited = false;
         g->nodes->weight = INITWEIGHT;
         g->nodes->parent = NULL;
@@ -276,19 +278,20 @@ graphAddNode(graph g, struct gpsH gpsInfo)
     // Adding a new node on the chain
     struct _node   *newNode = calloc(1, sizeof(_node));
 
-    setGPSDMS(&gpsInfo.latitude, &newNode->data.gps.lat);
-    setGPSDMS(&gpsInfo.longitude, &newNode->data.gps.lon);
+    setGPSDMS(&gps.latitude, &newNode->data.gps.lat);
+    setGPSDMS(&gps.longitude, &newNode->data.gps.lon);
 
-    newNode->data.gpsInfo = gpsInfo;
+    newNode->data.gpsInfo = gps;
+    newNode->data.zHead = zHead;
     newNode->visited = false;
     newNode->weight = INITWEIGHT;
     newNode->parent = NULL;
 
     struct _node   *curNode = g->nodes;
 
-    printf("%lf\n", dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo));
-
-    if (0.015 > dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
+    // MODEIFY TO INCLUDE ALTITUDE!!!!!!!!!
+    // CHECK ZERG ID
+    if (15 >= dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
     {
         graphAddEdge(newNode, curNode);
         graphAddEdge(curNode, newNode);
@@ -297,12 +300,13 @@ graphAddNode(graph g, struct gpsH gpsInfo)
     // Making sure we are at the last node on the chain
     while (curNode->next)
     {
-        if (0.015 > dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
+        curNode = curNode->next;
+        // MODEIFY TO INCLUDE ALTITUDE!!!!!!!!!
+        if (15 >= dist(&newNode->data.gpsInfo, &curNode->data.gpsInfo))
         {
             graphAddEdge(newNode, curNode);
             graphAddEdge(curNode, newNode);
         }
-        curNode = curNode->next;
     }
 
     curNode->next = newNode;
@@ -320,7 +324,7 @@ void graphAddEdge(struct _node *a, struct _node *b)
 
     // Setting weight based off the node value
     newEdge->node = b;
-    newEdge->weight = 1;
+    newEdge->weight = dist(&a->data.gpsInfo, &b->data.gpsInfo);
 
     if (!a->edges)
     {
@@ -340,19 +344,6 @@ void graphAddEdge(struct _node *a, struct _node *b)
 
 }
 
-// // Adding an edge to the graph
-// void
-// graphAutoEdges(
-//     graph g)
-// {
-//     if (!g || !g->nodes)
-//     {
-//         return;
-//     }
-
-//     _graphMakeEdges(g, g->nodes, g->nodes);
-// }
-
 // Destroying the graph
 void
 graphDestroy(
@@ -362,69 +353,6 @@ graphDestroy(
 
     free(g);
 }
-
-// // Making edges based off neighbors
-// static void
-// _graphMakeEdges(
-//     graph g,
-//     struct _node *curN,
-//     struct _node *topN)
-// {
-//     if (!curN || !topN)
-//     {
-//         return;
-//     }
-
-//     struct _node   *found;
-
-//     // Making an edge for every neighbor the node has
-//     if ((found = _graphFind(topN, curN->data.x + 1, curN->data.y)))
-//     {
-//         graphAddEdge(g, curN->data.x, curN->data.y, found->data.x,
-//                      found->data.y);
-//     }
-//     if ((found = _graphFind(topN, curN->data.x - 1, curN->data.y)))
-//     {
-//         graphAddEdge(g, curN->data.x, curN->data.y, found->data.x,
-//                      found->data.y);
-//     }
-//     if ((found = _graphFind(topN, curN->data.x, curN->data.y + 1)))
-//     {
-//         graphAddEdge(g, curN->data.x, curN->data.y, found->data.x,
-//                      found->data.y);
-//     }
-//     if ((found = _graphFind(topN, curN->data.x, curN->data.y - 1)))
-//     {
-//         graphAddEdge(g, curN->data.x, curN->data.y, found->data.x,
-//                      found->data.y);
-//     }
-
-//     _graphMakeEdges(g, curN->next, topN);
-// }
-
-// // Find a certain node
-// static void
-// _graphEditMap(
-//     struct _stack *s,
-//     char **map)
-// {
-//     if (!s)
-//     {
-//         return;
-//     }
-
-//     // Replacing variableness inside the map based off node values
-//     if (s->node && (s->node->data.value == ' ' || s->node->data.value == '~'))
-//     {
-//         map[s->node->data.y][s->node->data.x] = '.';
-//     }
-//     else if (s->node && s->node->data.value == '+')
-//     {
-//         map[s->node->data.y][s->node->data.x] = '/';
-//     }
-
-//     _graphEditMap(s->next, map);
-// }
 
 // Find a node based of it's x and y
 // static struct _node *_graphFind(struct _node *n, struct GPS *gps)

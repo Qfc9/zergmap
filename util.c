@@ -27,7 +27,7 @@ double dist(struct gpsH *a, struct gpsH *b)
     dx = cos(ph1) * cos(th1) - cos(th2);
     dy = sin(ph1) * cos(th1);
 
-    return asin(sqrt(dx * dx + dy * dy + dz * dz) / 2) * 2 * R;
+    return (asin(sqrt(dx * dx + dy * dy + dz * dz) / 2) * 2 * R) * 1000;
 }
 
 // Making the double into Degs/Mins/Secs
