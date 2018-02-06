@@ -71,6 +71,7 @@ static void printEdges(struct _edge *e);
 static void _graphAddEdge(struct _node *a, struct _node *b, double weight);
 static void _graphValidEdge(struct _node *a, struct _node *b);
 static void printFastest(struct _node *n);
+static void setEdgeInactive(struct _edge *e, struct _node *n);
 
 // Creating Graph
 graph graphCreate(void)
@@ -106,6 +107,65 @@ void removeSingle(struct _node *n)
     removeSingle(n->next);
 }
 
+static void setEdges(struct _node *n)
+{
+    if(!n)
+    {
+        return;
+    }
+
+    if(n->parent)
+    {
+       setEdgeInactive(n->parent->edges, n);
+    }
+
+    setEdges(n->parent);
+}
+
+void analyzeMap(graph g, struct _node *n)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    struct _stack  *s = calloc(1, sizeof(*s));
+
+    if (!s)
+    {
+        return;
+    }
+
+    size_t totalNodes = 1;
+
+    s->node = g->nodes;
+    s->node->weight = 0;
+    s->node->parent = NULL;
+    _graphFastPath(s, n->edges, &totalNodes);
+    setEdges(n);
+
+    if (!n->parent)
+    {
+        printf("Remove zerg #%u\n", n->data.zHead.details.source);
+        free(s);
+        return;
+    }
+
+    graphResetNodes(g);
+    s->node->weight = 0;
+    s->node->parent = NULL;
+    _graphFastPath(s, n->edges, &totalNodes);
+    setEdges(n);
+
+    if (!n->parent)
+    {
+        printf("Remove zerg #%u\n", n->data.zHead.details.source);
+    }
+
+    free(s);
+    analyzeMap(g, n->next);
+}
+
 void graphPrintNodes(graph g)
 {
     struct _stack  *s = calloc(1, sizeof(*s));
@@ -114,30 +174,17 @@ void graphPrintNodes(graph g)
     {
         return;
     }
-
-    unsigned int id = 20210;
-    size_t totalNodes = 1;
-
-    s->node = g->nodes;
-    s->node->visited = true;
-    s->node->weight = 0;
-    s->node->parent = NULL;
-    _graphFastPath(s, s->node->edges, &totalNodes);
-    printFastest(_graphFind(g->nodes, id));
-
-    // graphResetNodes(g);
-    // s->node->weight = 0;
-    // s->node->parent = NULL;
-    // _graphFastPath(s, s->node->edges);
-
-    // printFastest(_graphFind(g->nodes, id));
-
     printNodes(g->nodes);
+    printf("\n");
 
-    if (totalNodes > 2)
-    {
-        removeSingle(g->nodes);
-    }
+    analyzeMap(g, g->nodes->next);
+    // printFastest(_graphFind(g->nodes, id));
+    // printf("\n");
+
+    // if (totalNodes > 2)
+    // {
+    //     removeSingle(g->nodes);
+    // }
 
     free(s);
 }
