@@ -16,7 +16,7 @@ struct _node;
 
 void graphPrintNodes(graph g);
 graph graphCreate(void);
-void graphAddNode(graph g, union zergH zHead,struct gpsH gps);
+int graphAddNode(graph g, union zergH zHead, struct gpsH gps);
 void graphPrint(graph g,char **map,size_t mapSz,char end);
 void graphDestroy(graph g);
 void graphResetNodes(graph g);

@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
                         break;
                     }
 
-                    graphAddNode(zergGraph, zHeader, gpsHead);
+                    err = graphAddNode(zergGraph, zHeader, gpsHead);
                     break;
 
                 default:
@@ -187,9 +187,14 @@ int main(int argc, char *argv[])
             }
 
             // Checking if there were any errors in printing
-            if(err)
+            if(err == 2)
             {
-                fprintf(stderr, "An output error occurred, Skipping packet\n"); 
+                fprintf(stderr, "Duplicate Zerg Ids! Exiting...\n"); 
+                break;
+            }
+            else if(err > 0)
+            {
+                fprintf(stderr, "An output error occurred, Skipping packet\n");
             }
 
             // Reading any extra data 
@@ -202,6 +207,11 @@ int main(int argc, char *argv[])
         }
         
         fclose(fp);
+        if(err == 2)
+        {
+            graphDestroy(zergGraph);
+            return 2;
+        }
     }
     graphPrintNodes(zergGraph);
     graphDestroy(zergGraph);
