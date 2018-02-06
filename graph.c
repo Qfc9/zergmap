@@ -56,14 +56,8 @@ static void     _graphDestoryEdges(
 // static struct _node *_graphFindNode(
 //     struct _node *n,
 //     char value);
-// static bool     _graphDFS(
-//     struct _stack *stack,
-//     struct _stack *path,
-//     struct _edge *edge,
-//     char end);
-// static void     _graphFastPath(
-//     struct _stack *stack,
-//     struct _edge *edge);
+static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon);
+static void _graphFastPath(struct _stack *stack, struct _edge *edge);
 // static void     _graphResetNodes(
 //     struct _node *n);
 // static void     _freeStack(
@@ -90,6 +84,31 @@ graphCreate(
 void graphPrintNodes(graph g)
 {
     printNodes(g->nodes);
+
+    struct _stack  *s = calloc(1, sizeof(*s));
+
+    if (!s)
+    {
+        return;
+    }
+
+    struct _stack  *thePath = calloc(1, sizeof(*thePath));
+
+    if (!thePath)
+    {
+        free(s);
+        return;
+    }
+
+    s->node = g->nodes;
+    s->node->visited = true;
+    thePath->node = s->node;
+
+    if(_graphDFS(s, thePath, s->node->edges, 19.1828, -160.2833))
+    {
+        printf("Found\n");
+    }
+
 }
 
 static void printNodes(struct _node *n)
@@ -99,8 +118,8 @@ static void printNodes(struct _node *n)
         return;
     }
 
-    //printf("%u\t", n->data.zHead.details.source);
-    printf("(%.4lf, %.4lf)\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
+    printf("%u\t", n->data.zHead.details.source);
+    // printf("(%.4lf, %.4lf)\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
 
     printEdges(n->edges);
 
@@ -297,159 +316,155 @@ graphDestroy(
 //     free(s);
 // }
 
-// // My Dijkstra algorithm
-// static void
-// _graphFastPath(
-//     struct _stack *stack,
-//     struct _edge *edge)
-// {
-//     if (!edge || !stack)
-//     {
-//         return;
-//     }
+// My Dijkstra algorithm
+static void
+_graphFastPath(
+    struct _stack *stack,
+    struct _edge *edge)
+{
+    if (!edge || !stack)
+    {
+        return;
+    }
 
-//     // Making next stack
-//     if (stack->next)
-//     {
-//         free(stack->next);
-//         stack->next = NULL;
-//     }
+    // Making next stack
+    if (stack->next)
+    {
+        free(stack->next);
+        stack->next = NULL;
+    }
 
-//     // If I haven't visited this node
-//     if (edge->node->weight > (stack->node->weight + edge->weight))
-//     {
-//         stack->next = calloc(1, sizeof(_stack));
-//         if (!stack->next)
-//         {
-//             return;
-//         }
+    // If I haven't visited this node
+    if (edge->node->weight > (stack->node->weight + edge->weight))
+    {
+        stack->next = calloc(1, sizeof(_stack));
+        if (!stack->next)
+        {
+            return;
+        }
 
-//         // Adding stack data
-//         edge->node->weight = (stack->node->weight + edge->weight);
-//         edge->node->parent = stack->node;
-//         stack->next->node = edge->node;
+        // Adding stack data
+        edge->node->weight = (stack->node->weight + edge->weight);
+        edge->node->parent = stack->node;
+        stack->next->node = edge->node;
 
-//         _graphFastPath(stack->next, stack->next->node->edges);
+        _graphFastPath(stack->next, stack->next->node->edges);
 
-//         _graphFastPath(stack, stack->node->edges);
+        _graphFastPath(stack, stack->node->edges);
 
-//     }
+    }
 
-//     // If there is another edge
-//     if (edge->next)
-//     {
-//         // Going to the next edge
-//         _graphFastPath(stack, edge->next);
-//     }
-// }
+    // If there is another edge
+    if (edge->next)
+    {
+        // Going to the next edge
+        _graphFastPath(stack, edge->next);
+    }
+}
 
-// // My DFS algorithm
-// static bool
-// _graphDFS(
-//     struct _stack *stack,
-//     struct _stack *path,
-//     struct _edge *edge,
-//     char end)
-// {
-//     if (!edge || !stack)
-//     {
-//         return false;
-//     }
+// My DFS algorithm
+static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon)
+{
+    if (!edge || !stack)
+    {
+        return false;
+    }
 
-//     // Free Path and Stack if there is a next
-//     if (path->next)
-//     {
-//         free(path->next);
-//         path->next = NULL;
-//     }
-//     if (stack->next)
-//     {
-//         free(stack->next);
-//         stack->next = NULL;
-//     }
+    // Free Path and Stack if there is a next
+    if (path->next)
+    {
+        free(path->next);
+        path->next = NULL;
+    }
+    if (stack->next)
+    {
+        free(stack->next);
+        stack->next = NULL;
+    }
 
-//     // If I haven't visited this node
-//     if (edge->node->visited == false)
-//     {
-//         // Making next stack
-//         stack->next = calloc(1, sizeof(_stack));
-//         if (!stack->next)
-//         {
-//             return false;
-//         }
+    // If I haven't visited this node
+    if (edge->node->visited == false)
+    {
+        // Making next stack
+        stack->next = calloc(1, sizeof(_stack));
+        if (!stack->next)
+        {
+            return false;
+        }
 
-//         // Adding stack data
-//         stack->next->node = edge->node;
-//         stack->next->node->visited = true;
+        // Adding stack data
+        stack->next->node = edge->node;
+        stack->next->node->visited = true;
 
-//         // Making next path
-//         path->next = calloc(1, sizeof(_stack));
-//         if (!path->next)
-//         {
-//             return false;
-//         }
+        // Making next path
+        path->next = calloc(1, sizeof(_stack));
+        if (!path->next)
+        {
+            return false;
+        }
 
-//         // Adding and comparing path data
-//         path->next->node = stack->next->node;
-//         if (path->next->node->data.value == end)
-//         {
-//             return true;
-//         }
+        // Adding and comparing path data
+        path->next->node = stack->next->node;
+        if ((path->next->node->data.gpsInfo.latitude - endLat) < 0.00001 &&
+            (path->next->node->data.gpsInfo.longitude - endLon) < 0.000001 )
+        {
+            return true;
+        }
 
-//         // If there is another edges
-//         if (_graphDFS(stack->next, path->next, stack->next->node->edges, end))
-//         {
-//             return true;
-//         }
+        // If there is another edges
+        if (_graphDFS(stack->next, path->next, stack->next->node->edges, endLat, endLon))
+        {
+            return true;
+        }
 
-//         // If there isn't a next make one
-//         if (!path->next)
-//         {
-//             path->next = calloc(1, sizeof(_stack));
-//             if (!path->next)
-//             {
-//                 free(stack->next);
-//                 stack->next = NULL;
-//                 return false;
-//             }
-//         }
+        // If there isn't a next make one
+        if (!path->next)
+        {
+            path->next = calloc(1, sizeof(_stack));
+            if (!path->next)
+            {
+                free(stack->next);
+                stack->next = NULL;
+                return false;
+            }
+        }
 
-//         // Going to the next edge on the last stack item
-//         path->next->node = stack->node;
-//         if (_graphDFS(stack, path->next, stack->node->edges, end))
-//         {
-//             return true;
-//             if (stack->next)
-//             {
-//                 free(stack->next);
-//                 stack->next = NULL;
-//             }
-//         }
+        // Going to the next edge on the last stack item
+        path->next->node = stack->node;
+        if (_graphDFS(stack, path->next, stack->node->edges, endLat, endLon))
+        {
+            return true;
+            if (stack->next)
+            {
+                free(stack->next);
+                stack->next = NULL;
+            }
+        }
 
-//         // Free Path and Stack if there is a next
-//         if (path->next)
-//         {
-//             free(path->next);
-//             path->next = NULL;
-//         }
-//     }
-//     // If I have visited this node
-//     else
-//     {
-//         // If there is another edge
-//         if (edge->next)
-//         {
-//             // Going to the next edge
-//             if (_graphDFS(stack, path, edge->next, end))
-//             {
-//                 return true;
-//             }
-//         }
-//     }
+        // Free Path and Stack if there is a next
+        if (path->next)
+        {
+            free(path->next);
+            path->next = NULL;
+        }
+    }
+    // If I have visited this node
+    else
+    {
+        // If there is another edge
+        if (edge->next)
+        {
+            // Going to the next edge
+            if (_graphDFS(stack, path, edge->next, endLat, endLon))
+            {
+                return true;
+            }
+        }
+    }
 
-//     return false;
+    return false;
 
-// }
+}
 
 // // Settings all nodes to false
 // void
