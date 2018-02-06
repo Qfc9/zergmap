@@ -54,7 +54,7 @@ static void     _graphDestoryNodes(
     struct _node *n);
 static void     _graphDestoryEdges(
     struct _edge *e);
-static struct _node *_graphFind(struct _node *n, double lat, double lon);
+static struct _node *_graphFind(struct _node *n, unsigned int id);
 static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon);
 static void _graphFastPath(struct _stack *stack, struct _edge *edge);
 static void _graphResetNodes(struct _node *n);
@@ -100,41 +100,25 @@ void graphPrintNodes(graph g)
         return;
     }
 
-    struct _stack  *thePath = calloc(1, sizeof(*thePath));
-
-    if (!thePath)
-    {
-        free(s);
-        return;
-    }
+    unsigned int id = 20210;
 
     s->node = g->nodes;
     s->node->visited = true;
-    thePath->node = s->node;
-
-    // if(_graphDFS(s, thePath, s->node->edges, 19.1828, -160.2833))
-    // {
-    //     s->node = g->nodes;
-    //     _graphFastPath(s, s->node->edges);
-    //     printf("yo\n");
-    // }
-
     s->node->weight = 0;
     s->node->parent = NULL;
     _graphFastPath(s, s->node->edges);
-    printFastest(_graphFind(g->nodes, 19.1826, -160.2833));
+    printFastest(_graphFind(g->nodes, id));
 
     graphResetNodes(g);
     s->node->weight = 0;
     s->node->parent = NULL;
     _graphFastPath(s, s->node->edges);
 
-    printFastest(_graphFind(g->nodes, 19.1826, -160.2833));
+    printFastest(_graphFind(g->nodes, id));
 
     printNodes(g->nodes);
 
-
-
+    free(s);
 }
 
 static void setEdgeInactive(struct _edge *e, struct _node *n)
@@ -339,20 +323,19 @@ graphDestroy(
 }
 
 // Find a node based of it's x and y
-static struct _node *_graphFind(struct _node *n, double lat, double lon)
+static struct _node *_graphFind(struct _node *n, unsigned int id)
 {
     if (!n)
     {
         return NULL;
     }
 
-    if ((n->data.gpsInfo.latitude - lat) < 0.00001 && 
-        (n->data.gpsInfo.longitude - lon) < 0.00001)
+    if (n->data.zHead.details.source == id)
     {
         return n;
     }
 
-    return _graphFind(n->next, lat, lon);
+    return _graphFind(n->next, id);
 }
 
 
