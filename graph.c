@@ -166,7 +166,7 @@ static void printNodes(struct _node *n)
         return;
     }
 
-    printf("%u\t", n->data.zHead.details.source);
+    printf("%u[%f]\t", n->data.zHead.details.source,  n->data.gpsInfo.altitude);
     // printf("(%.4lf, %.4lf)\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
 
     printEdges(n->edges);
@@ -209,6 +209,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
         setGPSDMS(&gps.longitude, &g->nodes->data.gps.lon);
 
         g->nodes->data.gpsInfo = gps;
+        g->nodes->data.gpsInfo.altitude = g->nodes->data.gpsInfo.altitude * 1.8288;
         g->nodes->data.zHead = zHead;
         g->nodes->edgeCount = 0;
         g->nodes->visited = false;
@@ -224,6 +225,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
     setGPSDMS(&gps.longitude, &newNode->data.gps.lon);
 
     newNode->data.gpsInfo = gps;
+    newNode->data.gpsInfo.altitude = newNode->data.gpsInfo.altitude * 1.8288;
     newNode->data.zHead = zHead;
     newNode->edgeCount = 0;
     newNode->visited = false;
@@ -287,6 +289,12 @@ static void _graphAddEdge(struct _node *a, struct _node *b, double weight)
     }
 
     struct _edge   *newEdge = calloc(1, sizeof(*newEdge));
+    if (!newEdge)
+    {
+        return;
+    }
+
+    a->edgeCount++;
 
     // Setting weight based off the node value
     newEdge->node = b;
@@ -308,8 +316,6 @@ static void _graphAddEdge(struct _node *a, struct _node *b, double weight)
     }
 
     curEdge->next = newEdge;
-    a->edgeCount++;
-
 }
 
 // Destroying the graph
