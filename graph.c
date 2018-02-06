@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #include "graph.h"
 #include "zergPrint.h"
@@ -73,7 +74,7 @@ static void     _graphDestoryEdges(
 
 static void printNodes(struct _node *n);
 static void printEdges(struct _edge *e);
-static void _graphAddEdge(struct _node *a, struct _node *b);
+static void _graphAddEdge(struct _node *a, struct _node *b, double weight);
 static void _graphValidEdge(struct _node *a, struct _node *b);
 
 // Creating Graph
@@ -175,16 +176,30 @@ void graphAddNode(graph g, union zergH zHead, struct gpsH gps)
 
 static void _graphValidEdge(struct _node *a, struct _node *b)
 {
-    // ADD ALTITUDE@
-    if (15 >= dist(&a->data.gpsInfo, &b->data.gpsInfo))
+    if (!a || !b)
     {
-        _graphAddEdge(a, b);
-        _graphAddEdge(b, a);
+        return;
     }
+
+    double altDiff = a->data.gpsInfo.altitude - b->data.gpsInfo.altitude;
+
+    if (altDiff > 15.0000)
+    {
+        return;
+    }
+
+    double trueDist = sqrt(pow(dist(&a->data.gpsInfo, &b->data.gpsInfo), 2) + pow(altDiff, 2));
+
+    if (trueDist > 15.0000)
+    {
+        return;
+    }
+    _graphAddEdge(a, b, trueDist);
+    _graphAddEdge(b, a, trueDist);
 }
 
 // Adding an edge to the graph
-static void _graphAddEdge(struct _node *a, struct _node *b)
+static void _graphAddEdge(struct _node *a, struct _node *b, double weight)
 {
     if (!a || !b)
     {
@@ -195,7 +210,7 @@ static void _graphAddEdge(struct _node *a, struct _node *b)
 
     // Setting weight based off the node value
     newEdge->node = b;
-    newEdge->weight = dist(&a->data.gpsInfo, &b->data.gpsInfo);
+    newEdge->weight = weight;
 
     if (!a->edges)
     {
