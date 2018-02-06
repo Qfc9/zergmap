@@ -12,6 +12,7 @@
 #define R (6371.0 / 2.0)
 #define TO_RAD (3.1415926536 / 180)
 
+// https://rosettacode.org/wiki/Haversine_formula
 double dist(struct gpsH *a, struct gpsH *b)
 {
     double th1 = a->latitude;

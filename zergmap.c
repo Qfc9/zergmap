@@ -172,7 +172,6 @@ int main(int argc, char *argv[])
                     break;
                 case 3:
                     // Doesn't needs to take fp
-                    //err = printZGPS(&zHeader, fp);
 
                     if(setZGPS(fp, &gpsHead, sizeof(gpsHead)))
                     {
