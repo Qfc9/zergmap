@@ -178,7 +178,7 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
         _graphFastPath(s, s->node->edges, &totalNodes);
         setEdges(n);
         setNodes(n);
-        printFastest(n);
+        //printFastest(n);
 
         if (!n->parent && (_notAdjacent(g->nodes->edges, n) || (totalNodes > 2 && n->edgeCount < 2)))
         {
@@ -270,8 +270,7 @@ static void setEdgeInactive(struct _edge *e, struct _node *n)
         return;
     }
 
-    if ((e->node->data.gpsInfo.latitude - n->data.gpsInfo.latitude) <= 0.00000 && 
-        (e->node->data.gpsInfo.longitude - n->data.gpsInfo.longitude) <= 0.00000)
+    if (e->node->data.zHead.details.source == n->data.zHead.details.source)
     {
         e->visited = true;
         return;
@@ -307,7 +306,7 @@ static void printNodes(struct _node *n)
         return;
     }
 
-    printf("%u[%f]\t", n->data.zHead.details.source,  n->data.gpsInfo.altitude);
+    printf("%u[%zu]   \t", n->data.zHead.details.source,  n->edgeCount);
     // printf("(%.4lf, %.4lf)\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
 
     printEdges(n->edges);
@@ -423,6 +422,21 @@ static void _graphValidEdge(struct _node *a, struct _node *b)
     _graphAddEdge(b, a, trueDist);
 }
 
+static void _asdf(struct _edge *e)
+{
+    if (!e)
+    {
+        return;
+    }
+
+    if (e->node->edgeCount > 2)
+    {
+        e->weight = INITWEIGHT/100;
+    }
+
+    _asdf(e->next);
+}
+
 // Adding an edge to the graph
 static void _graphAddEdge(struct _node *a, struct _node *b, double weight)
 {
@@ -455,7 +469,18 @@ static void _graphAddEdge(struct _node *a, struct _node *b, double weight)
     // Making sure the edge it set at the end of the edges
     while (curEdge->next)
     {
+        if (a->edgeCount > 2 && curEdge->node->edgeCount > 2)
+        {
+            curEdge->weight = INITWEIGHT/100;
+            _asdf(curEdge->node->edges);
+        }
         curEdge = curEdge->next;
+    }
+
+    if (a->edgeCount > 2 && curEdge->node->edgeCount > 2)
+    {
+        curEdge->weight = INITWEIGHT/100;
+        _asdf(curEdge->node->edges);
     }
 
     curEdge->next = newEdge;
