@@ -180,7 +180,7 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
         setNodes(n);
         printFastest(n);
 
-        if (!n->parent && (_notAdjacent(g->nodes->edges, n)))
+        if (!n->parent && (_notAdjacent(g->nodes->edges, n) || (totalNodes > 2 && n->edgeCount < 2)))
         {
             badZerg->next = calloc(1, sizeof(*badZerg));
             if (!badZerg->next)
