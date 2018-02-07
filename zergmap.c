@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
     if(argc < 2)
     {
         fprintf(stderr, "Invalid amount of args\n");
+        graphDestroy(zergGraph);
         return 1;
     }
 
@@ -46,6 +47,7 @@ int main(int argc, char *argv[])
         if(fp == NULL)
         {
             fprintf(stderr, "Unable to open the file: %s\n", argv[1]);
+            graphDestroy(zergGraph);
             return 1;
         }
 
@@ -59,6 +61,7 @@ int main(int argc, char *argv[])
         if((pHeader.majVer != PCAPHEADMAJ) || (pHeader.minVer != PCAPHEADMIN) || (pHeader.linkType != PCAPHEADLINK))
         {
             fprintf(stderr, "Invalid PCAP Version\n");
+            graphDestroy(zergGraph);
             fclose(fp);
             return 1;
         }
