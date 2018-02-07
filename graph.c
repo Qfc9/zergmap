@@ -60,8 +60,7 @@ static struct _node *_graphFind(struct _node *n, unsigned int id);
 static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon);
 static void _graphFastPath(struct _stack *stack, struct _edge *edge, size_t *totalNodes);
 static void _graphResetNodes(struct _node *n);
-// static void     _freeStack(
-//     struct _stack *s);
+static void _freeStack(struct _stack *s);
 // static void     _graphResetNodes(
 //     struct _node *n);
 // static struct _node *_graphFind(struct _node *n, struct GPS *gps);
@@ -122,7 +121,7 @@ static void setEdges(struct _node *n)
     setEdges(n->parent);
 }
 
-void analyzeMap(graph g, struct _node *n)
+void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZergSz)
 {
     if (!n)
     {
@@ -130,63 +129,97 @@ void analyzeMap(graph g, struct _node *n)
     }
 
     struct _stack  *s = calloc(1, sizeof(*s));
-
     if (!s)
     {
         return;
     }
 
     size_t totalNodes = 1;
-
     s->node = g->nodes;
-    s->node->weight = 0;
-    s->node->parent = NULL;
-    _graphFastPath(s, n->edges, &totalNodes);
-    setEdges(n);
 
-    if (!n->parent)
+    for (int i = 0; i < 2; i++)
     {
-        printf("Remove zerg #%u\n", n->data.zHead.details.source);
-        free(s);
-        return;
-    }
+        graphResetNodes(g);
+        s->node->weight = 0;
+        s->node->parent = NULL;
+        _graphFastPath(s, n->edges, &totalNodes);
+        setEdges(n);
 
-    graphResetNodes(g);
-    s->node->weight = 0;
-    s->node->parent = NULL;
-    _graphFastPath(s, n->edges, &totalNodes);
-    setEdges(n);
+        if (!n->parent)
+        {
+            badZerg->next = calloc(1, sizeof(*badZerg));
+            if (!badZerg->next)
+            {
+                return;
+            }
+            (*badZergSz)++;
+            badZerg->node = n;
 
-    if (!n->parent)
-    {
-        printf("Remove zerg #%u\n", n->data.zHead.details.source);
+            break;
+        }
     }
 
     free(s);
-    analyzeMap(g, n->next);
+
+    if (!n->parent)
+    {
+        analyzeMap(g, n->next, badZerg->next, badZergSz);
+        return;
+    }
+
+    analyzeMap(g, n->next, badZerg, badZergSz);
 }
 
-void graphPrintNodes(graph g)
+static void _printBadZerg(struct _stack *s)
 {
-    struct _stack  *s = calloc(1, sizeof(*s));
-
     if (!s)
     {
         return;
     }
+    else if(!s->node)
+    {
+        free(s);
+        return;
+    }
+
+    printf("Remove zerg #%u\n", s->node->data.zHead.details.source);
+
+    _printBadZerg(s->next);
+    free(s);
+}
+
+
+
+void graphPrintNodes(graph g)
+{
+    struct _stack  *badZerg = calloc(1, sizeof(*badZerg));
+    if (!badZerg)
+    {
+        return;
+    }
+
+    size_t badZergSz = 0;
+
     printNodes(g->nodes);
     printf("\n");
 
-    analyzeMap(g, g->nodes->next);
-    // printFastest(_graphFind(g->nodes, id));
-    // printf("\n");
-
-    // if (totalNodes > 2)
-    // {
-    //     removeSingle(g->nodes);
-    // }
-
-    free(s);
+    analyzeMap(g, g->nodes->next, badZerg, &badZergSz);
+    
+    if (badZergSz > (g->totalNodes/2))
+    {
+        printf("TOO MANY CHANGES REQUIRED\n");
+        _freeStack(badZerg);
+    }
+    else if(badZergSz > 0)
+    {
+        printf("Network Alterations:\n");
+        _printBadZerg(badZerg);
+    }
+    else
+    {
+        printf("ALL ZERG ARE IN POSITION\n");
+        _freeStack(badZerg);
+    }
 }
 
 static void setEdgeInactive(struct _edge *e, struct _node *n)
@@ -263,6 +296,8 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
     {
         return err;
     }
+
+    g->totalNodes++;
 
     //If nodes exist make the first one
     if (!g->nodes)
@@ -435,18 +470,18 @@ static struct _node *_graphFind(struct _node *n, unsigned int id)
 //     _graphMakePath(s->next, n->parent);
 // }
 
-// // Freeing a Stack
-// static void
-// _freeStack(
-//     struct _stack *s)
-// {
-//     if (!s)
-//     {
-//         return;
-//     }
-//     _freeStack(s->next);
-//     free(s);
-// }
+// Freeing a Stack
+static void
+_freeStack(
+    struct _stack *s)
+{
+    if (!s)
+    {
+        return;
+    }
+    _freeStack(s->next);
+    free(s);
+}
 
 // My Dijkstra algorithm
 static void _graphFastPath(struct _stack *stack, struct _edge *edge, size_t *totalNodes)
@@ -455,17 +490,17 @@ static void _graphFastPath(struct _stack *stack, struct _edge *edge, size_t *tot
     {
         return;
     }
-    if (!edge->active)
-    {
-        _graphFastPath(stack, edge->next, totalNodes);
-        return;
-    }
-
     // Making next stack
     if (stack->next)
     {
         free(stack->next);
         stack->next = NULL;
+    }
+
+    if (!edge->active)
+    {
+        _graphFastPath(stack, edge->next, totalNodes);
+        return;
     }
 
     // If I haven't visited this node
