@@ -192,6 +192,11 @@ static void _printBadZerg(struct _stack *s)
 
 void graphPrintNodes(graph g)
 {
+    if (!g || !g->nodes)
+    {
+        return;
+    }
+
     struct _stack  *badZerg = calloc(1, sizeof(*badZerg));
     if (!badZerg)
     {
@@ -208,18 +213,19 @@ void graphPrintNodes(graph g)
     if (badZergSz > (g->totalNodes/2))
     {
         printf("TOO MANY CHANGES REQUIRED\n");
-        _freeStack(badZerg);
     }
     else if(badZergSz > 0)
     {
         printf("Network Alterations:\n");
         _printBadZerg(badZerg);
+        badZerg = NULL;
     }
     else
     {
         printf("ALL ZERG ARE IN POSITION\n");
-        _freeStack(badZerg);
     }
+
+    _freeStack(badZerg);
 }
 
 static void setEdgeInactive(struct _edge *e, struct _node *n)
