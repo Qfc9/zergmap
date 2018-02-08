@@ -51,21 +51,22 @@ struct _stack
 } _stack;
 
 // Initializing Static Functions
-static void _destroyNodes(struct _node *n);
-static void _destroyEdges(struct _edge *e);
 static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNodes);
-static void _resetNodes(struct _node *n, bool full);
-static void _freeStack(struct _stack *s);
-static void _setHeavyEdges(struct _edge *e);
-static void _disableRoute(struct _node *n);
-static void _addEdge(struct _node *a, struct _node *b, double weight);
 static void _validEdge(struct _node *a, struct _node *b);
-static void _setEdgeVisited(struct _edge *e, struct _node *n);
-static void _resetEdges(struct _edge *e);
+static bool _notAdjacent(struct _edge *e, struct _node *n);
 static void _printNodes(struct _node *n);
 static void _printEdges(struct _edge *e);
-static bool _notAdjacent(struct _edge *e, struct _node *n);
 static void _printBadZerg(struct _stack *s);
+static void _addEdge(struct _node *a, struct _node *b, double weight);
+static void _setHeavyEdges(struct _edge *e);
+static void _setEdgeVisited(struct _edge *e, struct _node *n);
+static void _setNodeData(struct _node *n, union zergH zHead, struct gpsH gps);
+static void _resetNodes(struct _node *n, bool full);
+static void _resetEdges(struct _edge *e);
+static void _freeStack(struct _stack *s);
+static void _disableRoute(struct _node *n);
+static void _destroyNodes(struct _node *n);
+static void _destroyEdges(struct _edge *e);
 
 // Can be removed
 static void _printStack(struct _stack *s);
@@ -91,25 +92,6 @@ void graphResetNodes(graph g, bool full)
     }
 
     _resetNodes(g->nodes, full);
-}
-
-static void _setNodeData(struct _node *n, union zergH zHead, struct gpsH gps)
-{
-    if (!n)
-    {
-        return;
-    }
-
-    setGPSDMS(&gps.latitude, &n->data.gps.lat);
-    setGPSDMS(&gps.longitude, &n->data.gps.lon);
-
-    n->data.gpsInfo = gps;
-    n->data.gpsInfo.altitude = n->data.gpsInfo.altitude * 1.8288;
-    n->data.zHead = zHead;
-    n->edgeCount = 0;
-    n->visited = false;
-    n->weight = INITWEIGHT;
-    n->parent = NULL;
 }
 
 // Adding a node to the graph
@@ -263,6 +245,25 @@ void graphDestroy(graph g)
     _destroyNodes(g->nodes);
 
     free(g);
+}
+
+static void _setNodeData(struct _node *n, union zergH zHead, struct gpsH gps)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    setGPSDMS(&gps.latitude, &n->data.gps.lat);
+    setGPSDMS(&gps.longitude, &n->data.gps.lon);
+
+    n->data.gpsInfo = gps;
+    n->data.gpsInfo.altitude = n->data.gpsInfo.altitude * 1.8288;
+    n->data.zHead = zHead;
+    n->edgeCount = 0;
+    n->visited = false;
+    n->weight = INITWEIGHT;
+    n->parent = NULL;
 }
 
 // Find a node based of it's x and y
