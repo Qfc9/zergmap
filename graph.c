@@ -93,6 +93,25 @@ void graphResetNodes(graph g, bool full)
     _resetNodes(g->nodes, full);
 }
 
+static void _setNodeData(struct _node *n, union zergH zHead, struct gpsH gps)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    setGPSDMS(&gps.latitude, &n->data.gps.lat);
+    setGPSDMS(&gps.longitude, &n->data.gps.lon);
+
+    n->data.gpsInfo = gps;
+    n->data.gpsInfo.altitude = n->data.gpsInfo.altitude * 1.8288;
+    n->data.zHead = zHead;
+    n->edgeCount = 0;
+    n->visited = false;
+    n->weight = INITWEIGHT;
+    n->parent = NULL;
+}
+
 // Adding a node to the graph
 int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
 {
@@ -107,42 +126,27 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
     //If nodes exist make the first one
     if (!g->nodes)
     {
-        g->nodes = calloc(1, sizeof(_node));
+        g->nodes = calloc(1, sizeof(*g->nodes));
         if (!g->nodes)
         {
             return err;
         }
 
-        setGPSDMS(&gps.latitude, &g->nodes->data.gps.lat);
-        setGPSDMS(&gps.longitude, &g->nodes->data.gps.lon);
-
-        g->nodes->data.gpsInfo = gps;
-        g->nodes->data.gpsInfo.altitude = g->nodes->data.gpsInfo.altitude * 1.8288;
-        g->nodes->data.zHead = zHead;
-        g->nodes->edgeCount = 0;
-        g->nodes->visited = false;
-        g->nodes->weight = INITWEIGHT;
-        g->nodes->parent = NULL;
+        _setNodeData(g->nodes, zHead, gps);
         return err;
     }
 
     // Adding a new node on the chain
-    struct _node   *newNode = calloc(1, sizeof(_node));
+    struct _node *curNode = g->nodes;
+    struct _node *newNode = calloc(1, sizeof(*newNode));
+    if (!newNode)
+    {
+        return 0;
+    }
 
-    setGPSDMS(&gps.latitude, &newNode->data.gps.lat);
-    setGPSDMS(&gps.longitude, &newNode->data.gps.lon);
-
-    newNode->data.gpsInfo = gps;
-    newNode->data.gpsInfo.altitude = newNode->data.gpsInfo.altitude * 1.8288;
-    newNode->data.zHead = zHead;
-    newNode->edgeCount = 0;
-    newNode->visited = false;
-    newNode->weight = INITWEIGHT;
-    newNode->parent = NULL;
-
-    struct _node   *curNode = g->nodes;
-
+    _setNodeData(newNode, zHead, gps);
    _validEdge(newNode, curNode);
+
     if (newNode->data.zHead.details.source == curNode->data.zHead.details.source)
     {
         err = 2;
