@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "zergHeaders.h"
 #include "zergPrint.h"
@@ -13,10 +14,6 @@
 
 int main(int argc, char *argv[])
 {
-    /*
-        This is my main function for decode.
-    */
-
     // Initializing Variables
     FILE *fp;
     struct pcapFileH pHeader;
@@ -32,17 +29,42 @@ int main(int argc, char *argv[])
     int swap = 0;
     long int dataLength = 0;
     unsigned int skipBytes = 0;
-    graph zergGraph = graphCreate();
+
+    // Setting getopt to not display errors
+    opterr = 0;
+    int optCode;
+    int minHp = 10;
+
+    // Looping through each flag
+    while ((optCode = getopt(argc, argv, "h:")) != -1)
+    {
+        switch (optCode)
+        {
+        case 'h':
+            minHp = strtol(optarg, NULL, 10);
+            break;
+        default:
+            fprintf(stderr, "Unknown flag -%c\n", optopt);
+            return 1;
+        }
+    }
 
     // Checking for valid amount for args
-    if(argc < 2)
+    if((argc - optind) == 0)
     {
         fprintf(stderr, "Invalid amount of args\n");
-        graphDestroy(zergGraph);
         return 1;
     }
 
-    for (int i = 1; i < argc; i++)
+    // Creating the graph
+    graph zergGraph = graphCreate();
+    if (!zergGraph)
+    {
+        fprintf(stderr, "Calloc Error!\n");
+        return 1;
+    }
+
+    for (int i = optind; i < argc; i++)
     {
         // Attempting to open the file given
         fp = fopen(argv[i], "r");
@@ -222,7 +244,7 @@ int main(int argc, char *argv[])
         }
     }
     graphPrintBadZerg(zergGraph);
-    graphPrintLowHP(zergGraph, 10);
+    graphPrintLowHP(zergGraph, minHp);
     graphDestroy(zergGraph);
     return 0;
 }
