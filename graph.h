@@ -17,6 +17,7 @@ int graphAddStatus(graph g, union zergH zHead, struct statusH status);
 void graphPrintBadZerg(graph g);
 void graphPrintLowHP(graph g, int limit);
 void graphDestroy(graph g);
+void graphRemoveBadNodes(graph g);
 void graphResetNodes(graph g, bool full);
 
 #endif

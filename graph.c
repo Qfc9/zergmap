@@ -57,6 +57,7 @@ static bool _notAdjacent(struct _edge *e, struct _node *n);
 static void _printNodes(struct _node *n);
 static void _printEdges(struct _edge *e);
 static void _printBadZerg(struct _stack *s);
+static void _printLowHP(struct _node *n, int limit, bool isLow);
 static void _addEdge(struct _node *a, struct _node *b, double weight);
 static struct _node *_findNode(struct _node *n, unsigned int id);
 static void _setHeavyEdges(struct _edge *e);
@@ -64,6 +65,7 @@ static void _setEdgeVisited(struct _edge *e, struct _node *n);
 static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps);
 static void _resetNodes(struct _node *n, bool full);
 static void _resetEdges(struct _edge *e);
+static void _removeBadNodes(struct _node *n);
 static void _freeStack(struct _stack *s);
 static void _disableRoute(struct _node *n);
 static void _destroyNodes(struct _node *n);
@@ -288,6 +290,60 @@ void graphPrintBadZerg(graph g)
     _freeStack(badZerg);
 }
 
+void graphPrintLowHP(graph g, int limit)
+{
+    printf("\n");
+    _printLowHP(g->nodes, limit, false);
+}
+
+void graphRemoveBadNodes(graph g)
+{
+    if (!g || !g->nodes)
+    {
+        return;
+    }
+
+    _removeBadNodes(g->nodes);
+    if (!g->nodes->data.gpsInfo)
+    {
+        struct _node *freeMe = g->nodes;
+        g->nodes = g->nodes->next;
+
+        _destroyNodes(freeMe);
+    }
+}
+
+// Destroying the graph
+void graphDestroy(graph g)
+{
+    if (!g)
+    {
+        return;
+    }
+
+    _destroyNodes(g->nodes);
+    free(g);
+}
+
+static void _removeBadNodes(struct _node *n)
+{
+    if (!n || !n->next)
+    {
+        return;
+    }
+
+    _removeBadNodes(n->next);
+
+    if (!n->next->data.gpsInfo)
+    {
+        struct _node *freeMe = n->next;
+        n->next = n->next->next;
+
+        freeMe->next = NULL;
+        _destroyNodes(freeMe);
+    }
+}
+
 static void _printLowHP(struct _node *n, int limit, bool isLow)
 {
     if (!n)
@@ -306,24 +362,6 @@ static void _printLowHP(struct _node *n, int limit, bool isLow)
     }
 
     _printLowHP(n->next, limit, isLow);
-}
-
-void graphPrintLowHP(graph g, int limit)
-{
-    printf("\n");
-    _printLowHP(g->nodes, limit, false);
-}
-
-// Destroying the graph
-void graphDestroy(graph g)
-{
-    if (!g)
-    {
-        return;
-    }
-
-    _destroyNodes(g->nodes);
-    free(g);
 }
 
 static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)

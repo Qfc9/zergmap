@@ -204,7 +204,6 @@ int main(int argc, char *argv[])
                     setZStatus(fp, &zStatus, sizeof(zStatus));
                     err = graphAddStatus(zergGraph, zHeader, zStatus);
 
-                    //skipAhead(fp, 0, "", zHeader.details.length - 24));
                     break;
                 case 3:
                     setZGPS(fp, &zGPS, sizeof(zGPS));
@@ -243,6 +242,7 @@ int main(int argc, char *argv[])
             return 2;
         }
     }
+    graphRemoveBadNodes(zergGraph);
     graphPrintBadZerg(zergGraph);
     graphPrintLowHP(zergGraph, minHp);
     graphDestroy(zergGraph);
