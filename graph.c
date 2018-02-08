@@ -98,11 +98,12 @@ void graphResetNodes(graph g, bool full)
     _resetNodes(g->nodes, full);
 }
 
-void graphAddStatus(graph g, union zergH zHead, struct statusH status)
+int graphAddStatus(graph g, union zergH zHead, struct statusH status)
 {
+    int err = 0;
     if (!g)
     {
-        return;
+        return err;
     }
 
     struct _node *found = NULL;
@@ -110,15 +111,25 @@ void graphAddStatus(graph g, union zergH zHead, struct statusH status)
     if(!(found = _findNode(g->nodes, zHead.details.source)))
     {
         graphAddNode(g, zHead, NULL);
-        found = _findNode(g->nodes, zHead.details.source);
+        return graphAddStatus(g, zHead, status);
     }
 
     if (!(found->data.status))
     {
         found->data.status = calloc(1, sizeof(*found->data.status));
+        if (!found->data.status)
+        {
+            return err;
+        }
+    }
+    else
+    {
+        err = 2;
     }
 
     *found->data.status = status;
+
+    return err;
 }
 
 // Adding a node to the graph

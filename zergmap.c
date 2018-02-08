@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
                     }
 
                     setZStatus(fp, &zStatus, sizeof(zStatus));
-                    graphAddStatus(zergGraph, zHeader, zStatus);
+                    err = graphAddStatus(zergGraph, zHeader, zStatus);
 
                     //skipAhead(fp, 0, "", zHeader.details.length - 24));
                     break;
