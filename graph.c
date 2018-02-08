@@ -61,7 +61,7 @@ static void _addEdge(struct _node *a, struct _node *b, double weight);
 static struct _node *_findNode(struct _node *n, unsigned int id);
 static void _setHeavyEdges(struct _edge *e);
 static void _setEdgeVisited(struct _edge *e, struct _node *n);
-static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps);
+static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps);
 static void _resetNodes(struct _node *n, bool full);
 static void _resetEdges(struct _edge *e);
 static void _freeStack(struct _stack *s);
@@ -152,7 +152,12 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
             return err;
         }
 
-        _setNodeData(g->nodes, &zHead, gps);
+        if(_setNodeData(g->nodes, &zHead, gps))
+        {
+            printf("Skipping node, out of bounds payload!\n");
+            free(g->nodes);
+            g->nodes = NULL;
+        }
         return err;
     }
 
@@ -164,7 +169,13 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
         return err;
     }
 
-    _setNodeData(newNode, &zHead, gps);
+    if(_setNodeData(newNode, &zHead, gps))
+    {
+        printf("Skipping node, out of bounds payload!\n");
+        free(newNode);
+        return err;
+    }
+
    _validEdge(newNode, curNode);
 
     if (newNode->data.zHead.details.source == curNode->data.zHead.details.source)
@@ -315,11 +326,11 @@ void graphDestroy(graph g)
     free(g);
 }
 
-static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
+static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
 {
     if (!n)
     {
-        return;
+        return false;
     }
 
     n->data.gpsInfo = NULL;
@@ -327,17 +338,32 @@ static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
 
     if (gps)
     {
-        setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
-        setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
+
+        gps->altitude = gps->altitude * 1.8288;
+
+        if (gps->latitude > 90.0 || gps->latitude < -90.0)
+        {
+            return true;
+        }
+        else if (gps->longitude > 180.0 || gps->longitude < -180.0)
+        {
+            return true;
+        }
+        else if (gps->altitude > 7000 ||  gps->altitude < -7000)
+        {
+            return true;
+        }
 
         n->data.gpsInfo = calloc(1, sizeof(*n->data.gpsInfo));
         if (!n->data.gpsInfo)
         {
-            return;
+            return true;
         }
 
+        setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
+        setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
+
         *n->data.gpsInfo = *gps;
-        n->data.gpsInfo->altitude = n->data.gpsInfo->altitude * 1.8288;
     }
 
     n->data.zHead = *zHead;
@@ -345,6 +371,8 @@ static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
     n->visited = false;
     n->weight = INITWEIGHT;
     n->parent = NULL;
+
+    return false;
 }
 
 // Find a node based of it's x and y
