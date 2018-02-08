@@ -273,11 +273,11 @@ static void _printLowHP(struct _node *n, int limit)
         return;
     }
 
-    if (!n->data.status || ((n->data.status->hp / n->data.status->maxHp * 100) <= limit))
+    if (!n->data.status || ((((float) n->data.status->hp / n->data.status->maxHp) * 100) <= limit))
     {
         printf("Zerg #%u Low HP\n", n->data.zHead.details.source);
     }
-
+    
     _printLowHP(n->next, limit);
 }
 
@@ -457,7 +457,6 @@ static void _printNodes(struct _node *n)
     }
 
     printf("%u[%zu]   \t", n->data.zHead.details.source,  n->edgeCount);
-    // printf("(%.4lf, %.4lf)\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
 
     _printEdges(n->edges);
 
