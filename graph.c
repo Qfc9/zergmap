@@ -79,6 +79,10 @@ static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, 
 graph graphCreate(void)
 {
     graph g = calloc(1, sizeof(*g));
+    if (!g)
+    {
+        return NULL;
+    }
 
     return g;
 }
@@ -152,7 +156,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
 
 void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZergSz)
 {
-    if (!n)
+    if (!g || !n || !badZerg || !badZergSz)
     {
         return;
     }
@@ -242,8 +246,12 @@ void graphPrintNodes(graph g)
 // Destroying the graph
 void graphDestroy(graph g)
 {
-    _destroyNodes(g->nodes);
+    if (!g)
+    {
+        return;
+    }
 
+    _destroyNodes(g->nodes);
     free(g);
 }
 
@@ -288,6 +296,7 @@ static void _printStack(struct _stack *s)
     {
         return;
     }
+
     printf("(%.4lf, %.4lf)\n", s->node->data.gpsInfo.latitude, s->node->data.gpsInfo.longitude);
 
     _printStack(s->next);
@@ -458,7 +467,7 @@ static void _addEdge(struct _node *a, struct _node *b, double weight)
         return;
     }
 
-    struct _edge   *newEdge = calloc(1, sizeof(*newEdge));
+    struct _edge *newEdge = calloc(1, sizeof(*newEdge));
     if (!newEdge)
     {
         return;
@@ -500,8 +509,7 @@ static void _addEdge(struct _node *a, struct _node *b, double weight)
 }
 
 // Freeing a Stack
-static void _freeStack(
-    struct _stack *s)
+static void _freeStack(struct _stack *s)
 {
     if (!s)
     {
@@ -514,7 +522,7 @@ static void _freeStack(
 // My Dijkstra algorithm
 static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNodes)
 {
-    if (!edge || !stack)
+    if (!edge || !stack || !totalNodes)
     {
         return;
     }
@@ -567,7 +575,7 @@ static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNode
 // My DFS algorithm
 static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon)
 {
-    if (!edge || !stack)
+    if (!edge || !stack || !path)
     {
         return false;
     }
