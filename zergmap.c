@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "zergHeaders.h"
 #include "zergPrint.h"
@@ -25,7 +26,8 @@ int main(int argc, char *argv[])
     struct ipv6H ip6Header;
     struct udpH udpHeader;
     union zergH zHeader;
-    struct gpsH gpsHead;
+    struct gpsH zGPS;
+    struct statusH zStatus;
     int err = 0;
     int swap = 0;
     long int dataLength = 0;
@@ -171,18 +173,21 @@ int main(int argc, char *argv[])
             switch(getZType(&zHeader))
             {
                 case 1:
-                    err = printZStatus(&zHeader, fp);
-                    break;
-                case 3:
-                    // Doesn't needs to take fp
-
-                    if(setZGPS(fp, &gpsHead, sizeof(gpsHead)))
+                    if((zHeader.details.length - 24) < 0)
                     {
                         err = 1;
                         break;
                     }
 
-                    err = graphAddNode(zergGraph, zHeader, gpsHead);
+                    setZStatus(fp, &zStatus, sizeof(zStatus));
+                    graphAddStatus(zergGraph, zHeader, zStatus);
+
+                    //skipAhead(fp, 0, "", zHeader.details.length - 24));
+                    break;
+                case 3:
+                    setZGPS(fp, &zGPS, sizeof(zGPS));
+
+                    err = graphAddNode(zergGraph, zHeader, zGPS);
                     break;
 
                 default:
@@ -197,7 +202,7 @@ int main(int argc, char *argv[])
             }
             else if(err > 0)
             {
-                fprintf(stderr, "An output error occurred, Skipping packet\n");
+                fprintf(stderr, "A payload error occurred, Skipping packet\n");
             }
 
             // Reading any extra data 

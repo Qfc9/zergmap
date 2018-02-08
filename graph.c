@@ -20,7 +20,7 @@ struct _graph
 struct _data
 {
     union zergH zHead;
-    struct statusH status;
+    struct statusH *status;
     struct gpsH gpsInfo;
     struct GPS gps;
 } _data;
@@ -58,6 +58,7 @@ static void _printNodes(struct _node *n);
 static void _printEdges(struct _edge *e);
 static void _printBadZerg(struct _stack *s);
 static void _addEdge(struct _node *a, struct _node *b, double weight);
+static struct _node *_findNode(struct _node *n, unsigned int id);
 static void _setHeavyEdges(struct _edge *e);
 static void _setEdgeVisited(struct _edge *e, struct _node *n);
 static void _setNodeData(struct _node *n, union zergH zHead, struct gpsH gps);
@@ -71,7 +72,6 @@ static void _destroyEdges(struct _edge *e);
 // Can be removed
 static void _printStack(struct _stack *s);
 static void _printFastest(struct _node *n);
-static struct _node *_findNode(struct _node *n, unsigned int id);
 static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon);
 
 
@@ -96,6 +96,29 @@ void graphResetNodes(graph g, bool full)
     }
 
     _resetNodes(g->nodes, full);
+}
+
+void graphAddStatus(graph g, union zergH zHead, struct statusH status)
+{
+    if (!g)
+    {
+        return;
+    }
+
+    struct _node *found = NULL;
+
+    if(!(found = _findNode(g->nodes, zHead.details.source)))
+    {
+        // add node
+    }
+
+    found->data.status = calloc(1, sizeof(*found->data.status));
+    if (!found->data.status)
+    {
+        return;
+    }  
+
+    *found->data.status = status;
 }
 
 // Adding a node to the graph
