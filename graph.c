@@ -20,8 +20,8 @@ struct _graph
 struct _data
 {
     union zergH zHead;
-    struct statusH status;
-    struct gpsH gpsInfo;
+    struct statusH *status;
+    struct gpsH *gpsInfo;
     struct GPS gps;
 } _data;
 
@@ -72,7 +72,7 @@ static void _destroyEdges(struct _edge *e);
 // Can be removed
 static void _printStack(struct _stack *s);
 static void _printFastest(struct _node *n);
-static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon);
+static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, unsigned int id);
 
 
 // Creating Graph
@@ -113,7 +113,12 @@ void graphAddStatus(graph g, union zergH zHead, struct statusH status)
         found = _findNode(g->nodes, zHead.details.source);
     }
 
-    found->data.status = status;
+    if (!(found->data.status))
+    {
+        found->data.status = calloc(1, sizeof(*found->data.status));
+    }
+
+    *found->data.status = status;
 }
 
 // Adding a node to the graph
@@ -238,7 +243,7 @@ void graphPrintNodes(graph g)
 
     size_t badZergSz = 0;
 
-    _printNodes(g->nodes);
+    //_printNodes(g->nodes);
     printf("\n");
 
     analyzeMap(g, g->nodes->next, badZerg, &badZergSz);
@@ -284,8 +289,15 @@ static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
     {
         setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
         setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
-        n->data.gpsInfo = *gps;
-        n->data.gpsInfo.altitude = n->data.gpsInfo.altitude * 1.8288;
+
+        n->data.gpsInfo = calloc(1, sizeof(*n->data.gpsInfo));
+        if (!n->data.gpsInfo)
+        {
+            return;
+        }
+
+        *n->data.gpsInfo = *gps;
+        n->data.gpsInfo->altitude = n->data.gpsInfo->altitude * 1.8288;
     }
 
     n->data.zHead = *zHead;
@@ -318,7 +330,7 @@ static void _printStack(struct _stack *s)
         return;
     }
 
-    printf("(%.4lf, %.4lf)\n", s->node->data.gpsInfo.latitude, s->node->data.gpsInfo.longitude);
+    printf("(%.4lf, %.4lf)\n", s->node->data.gpsInfo->latitude, s->node->data.gpsInfo->longitude);
 
     _printStack(s->next);
 }
@@ -443,19 +455,19 @@ static void _printEdges(struct _edge *e)
 
 static void _validEdge(struct _node *a, struct _node *b)
 {
-    if (!a || !b)
+    if (!a || !b || !a->data.gpsInfo || !b->data.gpsInfo)
     {
         return;
     }
 
-    double altDiff = a->data.gpsInfo.altitude - b->data.gpsInfo.altitude;
+    double altDiff = a->data.gpsInfo->altitude - b->data.gpsInfo->altitude;
 
     if (altDiff > 15.0000)
     {
         return;
     }
 
-    double trueDist = sqrt(pow(dist(&a->data.gpsInfo, &b->data.gpsInfo), 2) + pow(altDiff, 2));
+    double trueDist = sqrt(pow(dist(a->data.gpsInfo, b->data.gpsInfo), 2) + pow(altDiff, 2));
 
     if (trueDist > 15.0000)
     {
@@ -594,7 +606,7 @@ static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNode
 }
 
 // My DFS algorithm
-static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon)
+static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, unsigned int id)
 {
     if (!edge || !stack || !path)
     {
@@ -636,14 +648,13 @@ static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, 
 
         // Adding and comparing path data
         path->next->node = stack->next->node;
-        if ((path->next->node->data.gpsInfo.latitude - endLat) < 0.00001 &&
-            (path->next->node->data.gpsInfo.longitude - endLon) < 0.000001 )
+        if (stack->next->node->data.zHead.details.source == id)
         {
             return true;
         }
 
         // If there is another edges
-        if (_DFS(stack->next, path->next, stack->next->node->edges, endLat, endLon))
+        if (_DFS(stack->next, path->next, stack->next->node->edges, id))
         {
             return true;
         }
@@ -662,7 +673,7 @@ static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, 
 
         // Going to the next edge on the last stack item
         path->next->node = stack->node;
-        if (_DFS(stack, path->next, stack->node->edges, endLat, endLon))
+        if (_DFS(stack, path->next, stack->node->edges, id))
         {
             return true;
             if (stack->next)
@@ -686,7 +697,7 @@ static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, 
         if (edge->next)
         {
             // Going to the next edge
-            if (_DFS(stack, path, edge->next, endLat, endLon))
+            if (_DFS(stack, path, edge->next, id))
             {
                 return true;
             }
@@ -729,9 +740,7 @@ static void _resetEdges(struct _edge *e)
 }
 
 // Destroy edges
-static void
-_destroyEdges(
-    struct _edge *e)
+static void _destroyEdges(struct _edge *e)
 {
     if (!e)
     {
@@ -743,9 +752,7 @@ _destroyEdges(
 }
 
 // Destroy nodes and edges
-static void
-_destroyNodes(
-    struct _node *n)
+static void _destroyNodes(struct _node *n)
 {
     if (!n)
     {
@@ -754,5 +761,14 @@ _destroyNodes(
 
     _destroyEdges(n->edges);
     _destroyNodes(n->next);
+    
+    if(n->data.status)
+    {
+        free(n->data.status);
+    }
+    if(n->data.gpsInfo)
+    {
+        free(n->data.gpsInfo);
+    }
     free(n);
 }
