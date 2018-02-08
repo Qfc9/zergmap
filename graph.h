@@ -12,7 +12,7 @@
 typedef struct _graph *graph;
 
 graph graphCreate(void);
-int graphAddNode(graph g, union zergH zHead, struct gpsH gps);
+int graphAddNode(graph g, union zergH zHead, struct gpsH *gps);
 void graphAddStatus(graph g, union zergH zHead, struct statusH status);
 void graphPrintNodes(graph g);
 void graphDestroy(graph g);

@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
                 case 3:
                     setZGPS(fp, &zGPS, sizeof(zGPS));
 
-                    err = graphAddNode(zergGraph, zHeader, zGPS);
+                    err = graphAddNode(zergGraph, zHeader, &zGPS);
                     break;
 
                 default:

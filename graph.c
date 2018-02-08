@@ -20,7 +20,7 @@ struct _graph
 struct _data
 {
     union zergH zHead;
-    struct statusH *status;
+    struct statusH status;
     struct gpsH gpsInfo;
     struct GPS gps;
 } _data;
@@ -61,7 +61,7 @@ static void _addEdge(struct _node *a, struct _node *b, double weight);
 static struct _node *_findNode(struct _node *n, unsigned int id);
 static void _setHeavyEdges(struct _edge *e);
 static void _setEdgeVisited(struct _edge *e, struct _node *n);
-static void _setNodeData(struct _node *n, union zergH zHead, struct gpsH gps);
+static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps);
 static void _resetNodes(struct _node *n, bool full);
 static void _resetEdges(struct _edge *e);
 static void _freeStack(struct _stack *s);
@@ -109,20 +109,15 @@ void graphAddStatus(graph g, union zergH zHead, struct statusH status)
 
     if(!(found = _findNode(g->nodes, zHead.details.source)))
     {
-        // add node
+        graphAddNode(g, zHead, NULL);
+        found = _findNode(g->nodes, zHead.details.source);
     }
 
-    found->data.status = calloc(1, sizeof(*found->data.status));
-    if (!found->data.status)
-    {
-        return;
-    }  
-
-    *found->data.status = status;
+    found->data.status = status;
 }
 
 // Adding a node to the graph
-int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
+int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
 {
     int err = 0;
     if (!g)
@@ -141,7 +136,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
             return err;
         }
 
-        _setNodeData(g->nodes, zHead, gps);
+        _setNodeData(g->nodes, &zHead, gps);
         return err;
     }
 
@@ -150,10 +145,10 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH gps)
     struct _node *newNode = calloc(1, sizeof(*newNode));
     if (!newNode)
     {
-        return 0;
+        return err;
     }
 
-    _setNodeData(newNode, zHead, gps);
+    _setNodeData(newNode, &zHead, gps);
    _validEdge(newNode, curNode);
 
     if (newNode->data.zHead.details.source == curNode->data.zHead.details.source)
@@ -278,19 +273,22 @@ void graphDestroy(graph g)
     free(g);
 }
 
-static void _setNodeData(struct _node *n, union zergH zHead, struct gpsH gps)
+static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
 {
     if (!n)
     {
         return;
     }
 
-    setGPSDMS(&gps.latitude, &n->data.gps.lat);
-    setGPSDMS(&gps.longitude, &n->data.gps.lon);
+    if (gps)
+    {
+        setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
+        setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
+        n->data.gpsInfo = *gps;
+        n->data.gpsInfo.altitude = n->data.gpsInfo.altitude * 1.8288;
+    }
 
-    n->data.gpsInfo = gps;
-    n->data.gpsInfo.altitude = n->data.gpsInfo.altitude * 1.8288;
-    n->data.zHead = zHead;
+    n->data.zHead = *zHead;
     n->edgeCount = 0;
     n->visited = false;
     n->weight = INITWEIGHT;
