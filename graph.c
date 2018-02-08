@@ -266,7 +266,7 @@ void graphPrintBadZerg(graph g)
     _freeStack(badZerg);
 }
 
-static void _printLowHP(struct _node *n, int limit)
+static void _printLowHP(struct _node *n, int limit, bool isLow)
 {
     if (!n)
     {
@@ -275,16 +275,21 @@ static void _printLowHP(struct _node *n, int limit)
 
     if (!n->data.status || ((((float) n->data.status->hp / n->data.status->maxHp) * 100) <= limit))
     {
-        printf("Zerg #%u Low HP\n", n->data.zHead.details.source);
+        if (!isLow)
+        {
+            isLow = true;
+            printf("LOW HEALTH (%%%d):\n", limit);
+        }
+        printf("Zerg #%u\n", n->data.zHead.details.source);
     }
-    
-    _printLowHP(n->next, limit);
+
+    _printLowHP(n->next, limit, isLow);
 }
 
 void graphPrintLowHP(graph g, int limit)
 {
     printf("\n");
-    _printLowHP(g->nodes, limit);
+    _printLowHP(g->nodes, limit, false);
 }
 
 // Destroying the graph
