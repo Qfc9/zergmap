@@ -221,7 +221,8 @@ int main(int argc, char *argv[])
             return 2;
         }
     }
-    graphPrintNodes(zergGraph);
+    graphPrintBadZerg(zergGraph);
+    graphPrintLowHP(zergGraph, 10);
     graphDestroy(zergGraph);
     return 0;
 }

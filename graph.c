@@ -228,7 +228,7 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
     analyzeMap(g, n->next, badZerg, badZergSz);
 }
 
-void graphPrintNodes(graph g)
+void graphPrintBadZerg(graph g)
 {
     if (!g || !g->nodes)
     {
@@ -266,6 +266,27 @@ void graphPrintNodes(graph g)
     _freeStack(badZerg);
 }
 
+static void _printLowHP(struct _node *n, int limit)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    if (!n->data.status || ((n->data.status->hp / n->data.status->maxHp * 100) <= limit))
+    {
+        printf("Zerg #%u Low HP\n", n->data.zHead.details.source);
+    }
+
+    _printLowHP(n->next, limit);
+}
+
+void graphPrintLowHP(graph g, int limit)
+{
+    printf("\n");
+    _printLowHP(g->nodes, limit);
+}
+
 // Destroying the graph
 void graphDestroy(graph g)
 {
@@ -284,6 +305,9 @@ static void _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
     {
         return;
     }
+
+    n->data.gpsInfo = NULL;
+    n->data.status = NULL;
 
     if (gps)
     {
@@ -761,7 +785,7 @@ static void _destroyNodes(struct _node *n)
 
     _destroyEdges(n->edges);
     _destroyNodes(n->next);
-    
+
     if(n->data.status)
     {
         free(n->data.status);

@@ -14,7 +14,8 @@ typedef struct _graph *graph;
 graph graphCreate(void);
 int graphAddNode(graph g, union zergH zHead, struct gpsH *gps);
 void graphAddStatus(graph g, union zergH zHead, struct statusH status);
-void graphPrintNodes(graph g);
+void graphPrintBadZerg(graph g);
+void graphPrintLowHP(graph g, int limit);
 void graphDestroy(graph g);
 void graphResetNodes(graph g, bool full);
 
