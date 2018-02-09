@@ -21,8 +21,7 @@ struct _data
 {
     union zergH zHead;
     struct statusH *status;
-    struct gpsH *gpsInfo;
-    struct GPS gps;
+    struct gpsH *gps;
 } _data;
 
 struct _node
@@ -32,13 +31,14 @@ struct _node
     bool visited;
     double weight;
     struct _node   *parent;
+    struct _stack *invalid;
     struct _edge   *edges;
     struct _node   *next;
 } _node;
 
 struct _edge
 {
-    double          weight;
+    double weight;
     bool visited;
     struct _node   *node;
     struct _edge   *next;
@@ -186,7 +186,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
     }
     else
     {
-        if (newNode->data.gpsInfo)
+        if (newNode->data.gps)
         {
             return 2;
         }
@@ -241,6 +241,8 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
 
     size_t totalNodes = 1;
     s->node = g->nodes;
+
+    _printStack(n->invalid);
     
     graphResetNodes(g, true);
     for (int i = 0; i < 2; i++)
@@ -292,7 +294,7 @@ void graphPrintBadZerg(graph g)
 
     size_t badZergSz = 0;
 
-    //_printNodes(g->nodes);
+    _printNodes(g->nodes);
     printf("\n");
 
     analyzeMap(g, g->nodes->next, badZerg, &badZergSz);
@@ -329,7 +331,7 @@ void graphRemoveBadNodes(graph g)
     }
 
     _removeBadNodes(g->nodes);
-    if (!g->nodes->data.gpsInfo)
+    if (!g->nodes->data.gps)
     {
         struct _node *freeMe = g->nodes;
         g->nodes = g->nodes->next;
@@ -359,7 +361,7 @@ static void _removeBadNodes(struct _node *n)
 
     _removeBadNodes(n->next);
 
-    if (!n->next->data.gpsInfo)
+    if (!n->next->data.gps)
     {
         struct _node *freeMe = n->next;
         n->next = n->next->next;
@@ -411,16 +413,13 @@ static bool _setGPS(struct _node *n,  struct gpsH *gps)
         return true;
     }
 
-    n->data.gpsInfo = calloc(1, sizeof(*n->data.gpsInfo));
-    if (!n->data.gpsInfo)
+    n->data.gps = calloc(1, sizeof(*n->data.gps));
+    if (!n->data.gps)
     {
         return true;
     }
 
-    setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
-    setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
-
-    *n->data.gpsInfo = *gps;
+    *n->data.gps = *gps;
 
     return false;
 }
@@ -432,7 +431,7 @@ static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
         return false;
     }
 
-    n->data.gpsInfo = NULL;
+    n->data.gps = NULL;
     n->data.status = NULL;
 
     if (gps)
@@ -449,6 +448,7 @@ static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
     n->visited = false;
     n->weight = INITWEIGHT;
     n->parent = NULL;
+    n->invalid = NULL;
 
     return false;
 }
@@ -476,7 +476,7 @@ static void _printStack(struct _stack *s)
         return;
     }
 
-    printf("(%.4lf, %.4lf)\n", s->node->data.gpsInfo->latitude, s->node->data.gpsInfo->longitude);
+    printf("(%.4lf, %.4lf)\n", s->node->data.gps->latitude, s->node->data.gps->longitude);
 
     _printStack(s->next);
 }
@@ -598,24 +598,64 @@ static void _printEdges(struct _edge *e)
     _printEdges(e->next);
 }
 
-static void _validEdge(struct _node *a, struct _node *b)
+static void _addInvalid(struct _stack *a, struct _node *b)
 {
-    if (!a || !b || !a->data.gpsInfo || !b->data.gpsInfo)
+    if (!a || !b)
     {
         return;
     }
 
-    double altDiff = a->data.gpsInfo->altitude - b->data.gpsInfo->altitude;
+    if (!a->next)
+    {
+        a->next = calloc(1, sizeof(*a->next));
+        if (!a->next)
+        {
+            return;
+        }
+        a->next->node = b;
+        a->next->next = NULL;
+        return;
+    }
+
+    _addInvalid(a->next, b);
+}
+
+static void _validEdge(struct _node *a, struct _node *b)
+{
+    if (!a || !b || !a->data.gps || !b->data.gps)
+    {
+        return;
+    }
+
+    double altDiff = a->data.gps->altitude - b->data.gps->altitude;
 
     if (altDiff > 15.0000)
     {
         return;
     }
 
-    double trueDist = sqrt(pow(dist(a->data.gpsInfo, b->data.gpsInfo), 2) + pow(altDiff, 2));
+    double trueDist = sqrt(pow(dist(a->data.gps, b->data.gps), 2) + pow(altDiff, 2));
 
     if (trueDist > 15.0000)
     {
+        return;
+    }
+    else if(trueDist <= 1.1430)
+    {
+        if (!a->invalid)
+        {
+            a->invalid = calloc(1, sizeof(*a->invalid));
+            if (!a->invalid)
+            {
+                return;
+            }
+            a->invalid->node = b;
+            a->invalid->next = NULL;
+        }
+        else
+        {
+            _addInvalid(a->invalid, b);
+        }
         return;
     }
     _addEdge(a, b, trueDist);
@@ -669,7 +709,7 @@ static void _addEdge(struct _node *a, struct _node *b, double weight)
     // Making sure the edge it set at the end of the edges
     while (curEdge->next)
     {
-        if (a->edgeCount > 2 && curEdge->node->edgeCount > 2)
+        if (a->edgeCount > 2 && curEdge->node->edgeCount > 2 && newEdge->weight <= 1.1430)
         {
             curEdge->weight = INITWEIGHT/100;
             _setHeavyEdges(curEdge->node->edges);
@@ -677,7 +717,7 @@ static void _addEdge(struct _node *a, struct _node *b, double weight)
         curEdge = curEdge->next;
     }
 
-    if (a->edgeCount > 2 && curEdge->node->edgeCount > 2)
+    if (a->edgeCount > 2 && curEdge->node->edgeCount > 2 && newEdge->weight <= 1.1430)
     {
         curEdge->weight = INITWEIGHT/100;
         _setHeavyEdges(curEdge->node->edges);
@@ -911,9 +951,9 @@ static void _destroyNodes(struct _node *n)
     {
         free(n->data.status);
     }
-    if(n->data.gpsInfo)
+    if(n->data.gps)
     {
-        free(n->data.gpsInfo);
+        free(n->data.gps);
     }
     free(n);
 }
