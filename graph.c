@@ -406,7 +406,7 @@ static bool _setGPS(struct _node *n,  struct gpsH *gps)
     {
         return true;
     }
-    else if (gps->altitude > 7000 ||  gps->altitude < -7000)
+    else if (gps->altitude > 11265.4 ||  gps->altitude < -11265.4)
     {
         return true;
     }
