@@ -1,6 +1,8 @@
 #define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "zergHeaders.h"
 #include "zergPrint.h"
@@ -12,10 +14,6 @@
 
 int main(int argc, char *argv[])
 {
-    /*
-        This is my main function for decode.
-    */
-
     // Initializing Variables
     FILE *fp;
     struct pcapFileH pHeader;
@@ -25,27 +23,55 @@ int main(int argc, char *argv[])
     struct ipv6H ip6Header;
     struct udpH udpHeader;
     union zergH zHeader;
-    struct gpsH gpsHead;
+    struct gpsH zGPS;
+    struct statusH zStatus;
     int err = 0;
     int swap = 0;
     long int dataLength = 0;
     unsigned int skipBytes = 0;
-    graph zergGraph = graphCreate();
+
+    // Setting getopt to not display errors
+    opterr = 0;
+    int optCode;
+    int minHp = 10;
+
+    // Looping through each flag
+    while ((optCode = getopt(argc, argv, "h:")) != -1)
+    {
+        switch (optCode)
+        {
+        case 'h':
+            minHp = strtol(optarg, NULL, 10);
+            break;
+        default:
+            fprintf(stderr, "Unknown flag -%c\n", optopt);
+            return 1;
+        }
+    }
 
     // Checking for valid amount for args
-    if(argc < 2)
+    if((argc - optind) == 0)
     {
         fprintf(stderr, "Invalid amount of args\n");
         return 1;
     }
 
-    for (int i = 1; i < argc; i++)
+    // Creating the graph
+    graph zergGraph = graphCreate();
+    if (!zergGraph)
+    {
+        fprintf(stderr, "Calloc Error!\n");
+        return 1;
+    }
+
+    for (int i = optind; i < argc; i++)
     {
         // Attempting to open the file given
         fp = fopen(argv[i], "r");
         if(fp == NULL)
         {
             fprintf(stderr, "Unable to open the file: %s\n", argv[1]);
+            graphDestroy(zergGraph);
             return 1;
         }
 
@@ -59,6 +85,7 @@ int main(int argc, char *argv[])
         if((pHeader.majVer != PCAPHEADMAJ) || (pHeader.minVer != PCAPHEADMIN) || (pHeader.linkType != PCAPHEADLINK))
         {
             fprintf(stderr, "Invalid PCAP Version\n");
+            graphDestroy(zergGraph);
             fclose(fp);
             return 1;
         }
@@ -168,18 +195,19 @@ int main(int argc, char *argv[])
             switch(getZType(&zHeader))
             {
                 case 1:
-                    err = printZStatus(&zHeader, fp);
-                    break;
-                case 3:
-                    // Doesn't needs to take fp
-
-                    if(setZGPS(fp, &gpsHead, sizeof(gpsHead)))
+                    if((zHeader.details.length - 24) < 0)
                     {
                         err = 1;
                         break;
                     }
 
-                    graphAddNode(zergGraph, zHeader, gpsHead);
+                    setZStatus(fp, &zStatus, sizeof(zStatus));
+                    err = graphAddStatus(zergGraph, zHeader, zStatus);
+
+                    break;
+                case 3:
+                    setZGPS(fp, &zGPS, sizeof(zGPS));
+                    err = graphAddNode(zergGraph, zHeader, &zGPS);
                     break;
 
                 default:
@@ -187,9 +215,14 @@ int main(int argc, char *argv[])
             }
 
             // Checking if there were any errors in printing
-            if(err)
+            if(err == 2)
             {
-                fprintf(stderr, "An output error occurred, Skipping packet\n"); 
+                fprintf(stderr, "Duplicate Zerg Ids! Exiting...\n"); 
+                break;
+            }
+            else if(err > 0)
+            {
+                fprintf(stderr, "A payload error occurred, Skipping packet\n");
             }
 
             // Reading any extra data 
@@ -202,8 +235,15 @@ int main(int argc, char *argv[])
         }
         
         fclose(fp);
+        if(err == 2)
+        {
+            graphDestroy(zergGraph);
+            return 2;
+        }
     }
-    graphPrintNodes(zergGraph);
+    graphRemoveBadNodes(zergGraph);
+    graphPrintBadZerg(zergGraph);
+    graphPrintLowHP(zergGraph, minHp);
     graphDestroy(zergGraph);
     return 0;
 }

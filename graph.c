@@ -5,7 +5,6 @@
 #include <math.h>
 
 #include "graph.h"
-#include "zergPrint.h"
 #include "util.h"
 
 #define INITWEIGHT 1000000
@@ -14,13 +13,15 @@
 struct _graph
 {
     struct _node   *nodes;
+    size_t totalNodes;
+    size_t totalEdges;
 } _graph;
 
 struct _data
 {
     union zergH zHead;
-    struct statusH status;
-    struct gpsH gpsInfo;
+    struct statusH *status;
+    struct gpsH *gpsInfo;
     struct GPS gps;
 } _data;
 
@@ -38,6 +39,7 @@ struct _node
 struct _edge
 {
     double          weight;
+    bool visited;
     struct _node   *node;
     struct _edge   *next;
 } _edge;
@@ -49,84 +51,541 @@ struct _stack
 } _stack;
 
 // Initializing Static Functions
-static void     _graphDestoryNodes(
-    struct _node *n);
-static void     _graphDestoryEdges(
-    struct _edge *e);
-// static struct _node *_graphFindNode(
-//     struct _node *n,
-//     char value);
-static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon);
-static void _graphFastPath(struct _stack *stack, struct _edge *edge);
-// static void     _graphResetNodes(
-//     struct _node *n);
-// static void     _freeStack(
-//     struct _stack *s);
-// static void     _graphResetNodes(
-//     struct _node *n);
-// static struct _node *_graphFind(struct _node *n, struct GPS *gps);
+static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNodes);
+static void _validEdge(struct _node *a, struct _node *b);
+static bool _notAdjacent(struct _edge *e, struct _node *n);
+static void _printNodes(struct _node *n);
+static void _printEdges(struct _edge *e);
+static void _printBadZerg(struct _stack *s);
+static void _printLowHP(struct _node *n, int limit, bool isLow);
+static void _addEdge(struct _node *a, struct _node *b, double weight);
+static struct _node *_findNode(struct _node *n, unsigned int id);
+static void _setHeavyEdges(struct _edge *e);
+static bool _setGPS(struct _node *n,  struct gpsH *gps);
+static void _setEdgeVisited(struct _edge *e, struct _node *n);
+static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps);
+static void _resetNodes(struct _node *n, bool full);
+static void _resetEdges(struct _edge *e);
+static void _removeBadNodes(struct _node *n);
+static void _freeStack(struct _stack *s);
+static void _disableRoute(struct _node *n);
+static void _destroyNodes(struct _node *n);
+static void _destroyEdges(struct _edge *e);
 
-static void printNodes(struct _node *n);
-static void printEdges(struct _edge *e);
-static void _graphAddEdge(struct _node *a, struct _node *b, double weight);
-static void _graphValidEdge(struct _node *a, struct _node *b);
+// Can be removed
+static void _printStack(struct _stack *s);
+static void _printFastest(struct _node *n);
+static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, unsigned int id);
+
 
 // Creating Graph
-graph
-graphCreate(
-    void)
+graph graphCreate(void)
 {
-    graph           g = calloc(1, sizeof(*g));
+    graph g = calloc(1, sizeof(*g));
+    if (!g)
+    {
+        return NULL;
+    }
 
     return g;
 }
 
-void graphPrintNodes(graph g)
+// Settings all nodes to false
+void graphResetNodes(graph g, bool full)
 {
-    printNodes(g->nodes);
+    if (!g)
+    {
+        return;
+    }
+
+    _resetNodes(g->nodes, full);
+}
+
+int graphAddStatus(graph g, union zergH zHead, struct statusH status)
+{
+    int err = 0;
+    if (!g)
+    {
+        return err;
+    }
+
+    struct _node *found = NULL;
+
+    if(!(found = _findNode(g->nodes, zHead.details.source)))
+    {
+        graphAddNode(g, zHead, NULL);
+        return graphAddStatus(g, zHead, status);
+    }
+
+    if (!(found->data.status))
+    {
+        found->data.status = calloc(1, sizeof(*found->data.status));
+        if (!found->data.status)
+        {
+            return err;
+        }
+    }
+    else
+    {
+        err = 2;
+    }
+
+    *found->data.status = status;
+
+    return err;
+}
+
+// Adding a node to the graph
+int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
+{
+    int err = 0;
+    if (!g)
+    {
+        return err;
+    }
+
+    g->totalNodes++;
+
+    //If nodes exist make the first one
+    if (!g->nodes)
+    {
+        g->nodes = calloc(1, sizeof(*g->nodes));
+        if (!g->nodes)
+        {
+            return err;
+        }
+        if(_setNodeData(g->nodes, &zHead, gps))
+        {
+            printf("Skipping node, out of bounds payload!\n");
+            free(g->nodes);
+            g->nodes = NULL;
+        }
+        g->nodes->next = NULL;
+        return err;
+    }
+
+    // Adding a new node on the chain
+    struct _node *curNode = g->nodes;
+    struct _node *newNode = _findNode(g->nodes, zHead.details.source);
+    bool new = true;
+
+    if(!newNode)
+    {
+        newNode = calloc(1, sizeof(*newNode));
+        if (!newNode)
+        {
+            return err;
+        }  
+        if(_setNodeData(newNode, &zHead, gps))
+        {
+            printf("Skipping node, out of bounds payload!\n");
+            free(newNode);
+            return err;
+        }
+        newNode->next = NULL;
+    }
+    else
+    {
+        if (newNode->data.gpsInfo)
+        {
+            return 2;
+        }
+
+        if(_setGPS(newNode, gps))
+        {
+            free(newNode);
+            return 2;
+        }
+        new = false;
+    }
+
+   _validEdge(newNode, curNode);
+
+    if (newNode->data.zHead.details.source == curNode->data.zHead.details.source && new)
+    {
+        err = 2;
+        return err;
+    }
+
+    // Making sure we are at the last node on the chain
+    while (curNode->next)
+    {   
+        if (newNode->data.zHead.details.source == curNode->data.zHead.details.source && new)
+        {
+            err = 2;
+        }
+        curNode = curNode->next;
+        _validEdge(newNode, curNode);
+    }
+
+    if (new)
+    {
+        curNode->next = newNode;
+    }
+
+    return err;
+}
+
+void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZergSz)
+{
+    if (!g || !n || !badZerg || !badZergSz)
+    {
+        return;
+    }
 
     struct _stack  *s = calloc(1, sizeof(*s));
-
     if (!s)
     {
         return;
     }
 
-    struct _stack  *thePath = calloc(1, sizeof(*thePath));
-
-    if (!thePath)
+    size_t totalNodes = 1;
+    s->node = g->nodes;
+    
+    graphResetNodes(g, true);
+    for (int i = 0; i < 2; i++)
     {
-        free(s);
+        graphResetNodes(g, false);
+        s->node->weight = 0;
+        s->node->parent = NULL;
+        _dijktra(s, s->node->edges, &totalNodes);
+        _disableRoute(n);
+        //_printFastest(n);
+
+        if (!n->parent && (_notAdjacent(g->nodes->edges, n) || (totalNodes > 2 && n->edgeCount < 2)))
+        {
+            badZerg->next = calloc(1, sizeof(*badZerg));
+            if (!badZerg->next)
+            {
+                return;
+            }
+            (*badZergSz)++;
+            badZerg->node = n;
+
+            break;
+        }
+    }
+
+    free(s);
+
+    if (!n->parent && _notAdjacent(g->nodes->edges, n))
+    {
+        analyzeMap(g, n->next, badZerg->next, badZergSz);
         return;
     }
 
-    s->node = g->nodes;
-    s->node->visited = true;
-    thePath->node = s->node;
-
-    if(_graphDFS(s, thePath, s->node->edges, 19.1828, -160.2833))
-    {
-        printf("Found\n");
-    }
-
+    analyzeMap(g, n->next, badZerg, badZergSz);
 }
 
-static void printNodes(struct _node *n)
+void graphPrintBadZerg(graph g)
+{
+    if (!g || !g->nodes)
+    {
+        return;
+    }
+
+    struct _stack  *badZerg = calloc(1, sizeof(*badZerg));
+    if (!badZerg)
+    {
+        return;
+    }
+
+    size_t badZergSz = 0;
+
+    //_printNodes(g->nodes);
+    printf("\n");
+
+    analyzeMap(g, g->nodes->next, badZerg, &badZergSz);
+    
+    if (badZergSz > (g->totalNodes/2))
+    {
+        printf("TOO MANY CHANGES REQUIRED\n");
+    }
+    else if(badZergSz > 0)
+    {
+        printf("Network Alterations:\n");
+        _printBadZerg(badZerg);
+        badZerg = NULL;
+    }
+    else
+    {
+        printf("ALL ZERG ARE IN POSITION\n");
+    }
+
+    _freeStack(badZerg);
+}
+
+void graphPrintLowHP(graph g, int limit)
+{
+    printf("\n");
+    _printLowHP(g->nodes, limit, false);
+}
+
+void graphRemoveBadNodes(graph g)
+{
+    if (!g || !g->nodes)
+    {
+        return;
+    }
+
+    _removeBadNodes(g->nodes);
+    if (!g->nodes->data.gpsInfo)
+    {
+        struct _node *freeMe = g->nodes;
+        g->nodes = g->nodes->next;
+
+        _destroyNodes(freeMe);
+    }
+}
+
+// Destroying the graph
+void graphDestroy(graph g)
+{
+    if (!g)
+    {
+        return;
+    }
+
+    _destroyNodes(g->nodes);
+    free(g);
+}
+
+static void _removeBadNodes(struct _node *n)
+{
+    if (!n || !n->next)
+    {
+        return;
+    }
+
+    _removeBadNodes(n->next);
+
+    if (!n->next->data.gpsInfo)
+    {
+        struct _node *freeMe = n->next;
+        n->next = n->next->next;
+
+        freeMe->next = NULL;
+        _destroyNodes(freeMe);
+    }
+}
+
+static void _printLowHP(struct _node *n, int limit, bool isLow)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    if (!n->data.status || ((((float) n->data.status->hp / n->data.status->maxHp) * 100) <= limit))
+    {
+        if (!isLow)
+        {
+            isLow = true;
+            printf("LOW HEALTH (%%%d):\n", limit);
+        }
+        printf("Zerg #%u\n", n->data.zHead.details.source);
+    }
+
+    _printLowHP(n->next, limit, isLow);
+}
+
+static bool _setGPS(struct _node *n,  struct gpsH *gps)
+{
+    if (!n)
+    {
+        return true;
+    }
+
+    gps->altitude = gps->altitude * 1.8288;
+
+    if (gps->latitude > 90.0 || gps->latitude < -90.0)
+    {
+        return true;
+    }
+    else if (gps->longitude > 180.0 || gps->longitude < -180.0)
+    {
+        return true;
+    }
+    else if (gps->altitude > 7000 ||  gps->altitude < -7000)
+    {
+        return true;
+    }
+
+    n->data.gpsInfo = calloc(1, sizeof(*n->data.gpsInfo));
+    if (!n->data.gpsInfo)
+    {
+        return true;
+    }
+
+    setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
+    setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
+
+    *n->data.gpsInfo = *gps;
+
+    return false;
+}
+
+static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
+{
+    if (!n)
+    {
+        return false;
+    }
+
+    n->data.gpsInfo = NULL;
+    n->data.status = NULL;
+
+    if (gps)
+    {
+
+        if(_setGPS(n, gps))
+        {
+            return true;
+        }
+    }
+
+    n->data.zHead = *zHead;
+    n->edgeCount = 0;
+    n->visited = false;
+    n->weight = INITWEIGHT;
+    n->parent = NULL;
+
+    return false;
+}
+
+// Find a node based of it's x and y
+static struct _node *_findNode(struct _node *n, unsigned int id)
+{
+    if (!n)
+    {
+        return NULL;
+    }
+
+    if (n->data.zHead.details.source == id)
+    {
+        return n;
+    }
+
+    return _findNode(n->next, id);
+}
+
+static void _printStack(struct _stack *s)
+{
+    if (!s)
+    {
+        return;
+    }
+
+    printf("(%.4lf, %.4lf)\n", s->node->data.gpsInfo->latitude, s->node->data.gpsInfo->longitude);
+
+    _printStack(s->next);
+}
+
+static void _disableRoute(struct _node *n)
 {
     if(!n)
     {
         return;
     }
 
-    printf("%u\t", n->data.zHead.details.source);
-    // printf("(%.4lf, %.4lf)\t", n->data.gpsInfo.latitude, n->data.gpsInfo.longitude);
+    if(n->parent)
+    {
 
-    printEdges(n->edges);
+        _setEdgeVisited(n->parent->edges, n);
+    }
 
-    printNodes(n->next);
+    if(n->parent && n->parent->parent)
+    {
+       n->parent->visited = true;
+    }
+
+    _disableRoute(n->parent);
 }
 
-static void printEdges(struct _edge *e)
+static bool _notAdjacent(struct _edge *e, struct _node *n)
+{
+    if (!e || !n)
+    {
+        return true;
+    }
+
+    if (e->node->data.zHead.details.source == n->data.zHead.details.source)
+    {
+        return false;
+    }
+
+    return _notAdjacent(e->next, n);
+}
+
+static void _printBadZerg(struct _stack *s)
+{
+    if (!s)
+    {
+        return;
+    }
+    else if(!s->node)
+    {
+        free(s);
+        return;
+    }
+
+    printf("Remove zerg #%u\n", s->node->data.zHead.details.source);
+
+    _printBadZerg(s->next);
+    free(s);
+}
+
+static void _setEdgeVisited(struct _edge *e, struct _node *n)
+{
+    if(!e || !n)
+    {
+        return;
+    }
+
+    if (e->node->data.zHead.details.source == n->data.zHead.details.source)
+    {
+        e->visited = true;
+        return;
+    }
+
+    _setEdgeVisited(e->next, n);
+}
+
+static void _printFastest(struct _node *n)
+{
+    if(!n)
+    {
+        return;
+    }
+
+    printf("%u[%.4lf]", n->data.zHead.details.source, n->weight);
+    if(n->parent)
+    {
+       printf(" -> "); 
+    }
+    else
+    {
+        printf("\n");
+    }
+
+    _printFastest(n->parent);
+}
+
+static void _printNodes(struct _node *n)
+{
+    if(!n)
+    {
+        return;
+    }
+
+    printf("%u[%zu]   \t", n->data.zHead.details.source,  n->edgeCount);
+
+    _printEdges(n->edges);
+
+    _printNodes(n->next);
+}
+
+static void _printEdges(struct _edge *e)
 {
     if(!e)
     {
@@ -134,102 +593,70 @@ static void printEdges(struct _edge *e)
         return;
     }
 
-    printf("E[%.1lf] (%.4lf, %.4lf)\t", e->weight, e->node->data.gpsInfo.latitude, e->node->data.gpsInfo.longitude);
+    printf("%u[%.2lf]\t", e->node->data.zHead.details.source, e->weight);
 
-    printEdges(e->next);
+    _printEdges(e->next);
 }
 
-// Adding a node to the graph
-void graphAddNode(graph g, union zergH zHead, struct gpsH gps)
+static void _validEdge(struct _node *a, struct _node *b)
 {
-    if (!g)
+    if (!a || !b || !a->data.gpsInfo || !b->data.gpsInfo)
     {
         return;
     }
 
-    //If nodes exist make the first one
-    if (!g->nodes)
-    {
-        g->nodes = calloc(1, sizeof(_node));
-        if (!g->nodes)
-        {
-            return;
-        }
-
-        setGPSDMS(&gps.latitude, &g->nodes->data.gps.lat);
-        setGPSDMS(&gps.longitude, &g->nodes->data.gps.lon);
-
-        g->nodes->data.gpsInfo = gps;
-        g->nodes->data.zHead = zHead;
-        g->nodes->visited = false;
-        g->nodes->weight = INITWEIGHT;
-        g->nodes->parent = NULL;
-        return;
-    }
-
-    // Adding a new node on the chain
-    struct _node   *newNode = calloc(1, sizeof(_node));
-
-    setGPSDMS(&gps.latitude, &newNode->data.gps.lat);
-    setGPSDMS(&gps.longitude, &newNode->data.gps.lon);
-
-    newNode->data.gpsInfo = gps;
-    newNode->data.zHead = zHead;
-    newNode->visited = false;
-    newNode->weight = INITWEIGHT;
-    newNode->parent = NULL;
-
-    struct _node   *curNode = g->nodes;
-
-   _graphValidEdge(newNode, curNode);
-
-    // Making sure we are at the last node on the chain
-    while (curNode->next)
-    {
-        curNode = curNode->next;
-        _graphValidEdge(newNode, curNode);
-    }
-
-    curNode->next = newNode;
-}
-
-static void _graphValidEdge(struct _node *a, struct _node *b)
-{
-    if (!a || !b)
-    {
-        return;
-    }
-
-    double altDiff = a->data.gpsInfo.altitude - b->data.gpsInfo.altitude;
+    double altDiff = a->data.gpsInfo->altitude - b->data.gpsInfo->altitude;
 
     if (altDiff > 15.0000)
     {
         return;
     }
 
-    double trueDist = sqrt(pow(dist(&a->data.gpsInfo, &b->data.gpsInfo), 2) + pow(altDiff, 2));
+    double trueDist = sqrt(pow(dist(a->data.gpsInfo, b->data.gpsInfo), 2) + pow(altDiff, 2));
 
     if (trueDist > 15.0000)
     {
         return;
     }
-    _graphAddEdge(a, b, trueDist);
-    _graphAddEdge(b, a, trueDist);
+    _addEdge(a, b, trueDist);
+    _addEdge(b, a, trueDist);
+}
+
+static void _setHeavyEdges(struct _edge *e)
+{
+    if (!e)
+    {
+        return;
+    }
+
+    if (e->node->edgeCount > 2)
+    {
+        e->weight = INITWEIGHT/100;
+    }
+
+    _setHeavyEdges(e->next);
 }
 
 // Adding an edge to the graph
-static void _graphAddEdge(struct _node *a, struct _node *b, double weight)
+static void _addEdge(struct _node *a, struct _node *b, double weight)
 {
     if (!a || !b)
     {
         return;
     }
 
-    struct _edge   *newEdge = calloc(1, sizeof(*newEdge));
+    struct _edge *newEdge = calloc(1, sizeof(*newEdge));
+    if (!newEdge)
+    {
+        return;
+    }
+
+    a->edgeCount++;
 
     // Setting weight based off the node value
     newEdge->node = b;
     newEdge->weight = weight;
+    newEdge->visited = false;
 
     if (!a->edges)
     {
@@ -242,96 +669,52 @@ static void _graphAddEdge(struct _node *a, struct _node *b, double weight)
     // Making sure the edge it set at the end of the edges
     while (curEdge->next)
     {
+        if (a->edgeCount > 2 && curEdge->node->edgeCount > 2)
+        {
+            curEdge->weight = INITWEIGHT/100;
+            _setHeavyEdges(curEdge->node->edges);
+        }
         curEdge = curEdge->next;
     }
 
+    if (a->edgeCount > 2 && curEdge->node->edgeCount > 2)
+    {
+        curEdge->weight = INITWEIGHT/100;
+        _setHeavyEdges(curEdge->node->edges);
+    }
+
     curEdge->next = newEdge;
-
 }
 
-// Destroying the graph
-void
-graphDestroy(
-    graph g)
+// Freeing a Stack
+static void _freeStack(struct _stack *s)
 {
-    _graphDestoryNodes(g->nodes);
-
-    free(g);
-}
-
-// Find a node based of it's x and y
-// static struct _node *_graphFind(struct _node *n, struct GPS *gps)
-// {
-//     if (!n)
-//     {
-//         return NULL;
-//     }
-
-//     if (n->data.gps.lon.degrees == gps->lon.degrees && 
-//         n->data.gps.lon.minutes == gps->lon.minutes && 
-//         n->data.gps.lon.seconds == gps->lon.seconds && 
-//         n->data.gps.lat.degrees == gps->lat.degrees &&
-//         n->data.gps.lat.minutes == gps->lat.minutes &&
-//         n->data.gps.lat.seconds == gps->lat.seconds)
-//     {
-//         return n;
-//     }
-
-//     return _graphFind(n->next, gps);
-// }
-
-
-// // Adding nodes onto a stack if it has a parent
-// static void
-// _graphMakePath(
-//     struct _stack *s,
-//     struct _node *n)
-// {
-//     if (!n)
-//     {
-//         return;
-//     }
-
-//     s->next = calloc(1, sizeof(*s));
-//     if (!s->next)
-//     {
-//         return;
-//     }
-
-//     s->next->node = n;
-
-//     _graphMakePath(s->next, n->parent);
-// }
-
-// // Freeing a Stack
-// static void
-// _freeStack(
-//     struct _stack *s)
-// {
-//     if (!s)
-//     {
-//         return;
-//     }
-//     _freeStack(s->next);
-//     free(s);
-// }
-
-// My Dijkstra algorithm
-static void
-_graphFastPath(
-    struct _stack *stack,
-    struct _edge *edge)
-{
-    if (!edge || !stack)
+    if (!s)
     {
         return;
     }
+    _freeStack(s->next);
+    free(s);
+}
 
+// My Dijkstra algorithm
+static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNodes)
+{
+    if (!edge || !stack || !totalNodes)
+    {
+        return;
+    }
     // Making next stack
     if (stack->next)
     {
         free(stack->next);
         stack->next = NULL;
+    }
+
+    if (edge->visited || edge->node->visited)
+    {
+        _dijktra(stack, edge->next, totalNodes);
+        return;
     }
 
     // If I haven't visited this node
@@ -343,14 +726,19 @@ _graphFastPath(
             return;
         }
 
+        if((edge->node->weight - INITWEIGHT) >= 0.00)
+        {
+            (*totalNodes)++;
+        }
+
         // Adding stack data
         edge->node->weight = (stack->node->weight + edge->weight);
         edge->node->parent = stack->node;
         stack->next->node = edge->node;
 
-        _graphFastPath(stack->next, stack->next->node->edges);
+        _dijktra(stack->next, stack->next->node->edges, totalNodes);
 
-        _graphFastPath(stack, stack->node->edges);
+        _dijktra(stack, stack->node->edges, totalNodes);
 
     }
 
@@ -358,14 +746,14 @@ _graphFastPath(
     if (edge->next)
     {
         // Going to the next edge
-        _graphFastPath(stack, edge->next);
+        _dijktra(stack, edge->next, totalNodes);
     }
 }
 
 // My DFS algorithm
-static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *edge, double endLat, double endLon)
+static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, unsigned int id)
 {
-    if (!edge || !stack)
+    if (!edge || !stack || !path)
     {
         return false;
     }
@@ -405,14 +793,13 @@ static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *e
 
         // Adding and comparing path data
         path->next->node = stack->next->node;
-        if ((path->next->node->data.gpsInfo.latitude - endLat) < 0.00001 &&
-            (path->next->node->data.gpsInfo.longitude - endLon) < 0.000001 )
+        if (stack->next->node->data.zHead.details.source == id)
         {
             return true;
         }
 
         // If there is another edges
-        if (_graphDFS(stack->next, path->next, stack->next->node->edges, endLat, endLon))
+        if (_DFS(stack->next, path->next, stack->next->node->edges, id))
         {
             return true;
         }
@@ -431,7 +818,7 @@ static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *e
 
         // Going to the next edge on the last stack item
         path->next->node = stack->node;
-        if (_graphDFS(stack, path->next, stack->node->edges, endLat, endLon))
+        if (_DFS(stack, path->next, stack->node->edges, id))
         {
             return true;
             if (stack->next)
@@ -455,7 +842,7 @@ static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *e
         if (edge->next)
         {
             // Going to the next edge
-            if (_graphDFS(stack, path, edge->next, endLat, endLon))
+            if (_DFS(stack, path, edge->next, id))
             {
                 return true;
             }
@@ -466,79 +853,67 @@ static bool _graphDFS(struct _stack *stack, struct _stack *path, struct _edge *e
 
 }
 
-// // Settings all nodes to false
-// void
-// graphResetNodes(
-//     graph g)
-// {
-//     if (!g)
-//     {
-//         return;
-//     }
-
-//     _graphResetNodes(g->nodes);
-// }
-
-// // Settings all nodes to false
-// static void
-// _graphResetNodes(
-//     struct _node *n)
-// {
-//     if (!n)
-//     {
-//         return;
-//     }
-
-//     n->visited = false;
-//     n->weight = INITWEIGHT;
-//     n->parent = NULL;
-//     _graphResetNodes(n->next);
-// }
-
-// // Find a certain node
-// static struct _node *
-// _graphFindNode(
-//     struct _node *n,
-//     char value)
-// {
-//     if (!n)
-//     {
-//         return NULL;
-//     }
-
-//     if (n->data.value == value)
-//     {
-//         return n;
-//     }
-
-//     return _graphFindNode(n->next, value);
-// }
-
-// Destroy edges
-static void
-_graphDestoryEdges(
-    struct _edge *e)
-{
-    if (!e)
-    {
-        return;
-    }
-
-    _graphDestoryEdges(e->next);
-    free(e);
-}
-
-// Destroy nodes and edges
-static void
-_graphDestoryNodes(
-    struct _node *n)
+// Settings all nodes to false
+static void _resetNodes(struct _node *n, bool full)
 {
     if (!n)
     {
         return;
     }
 
-    _graphDestoryEdges(n->edges);
-    _graphDestoryNodes(n->next);
+    if (full)
+    {
+        n->visited = false;
+        _resetEdges(n->edges);
+    }
+    n->weight = INITWEIGHT;
+    n->parent = NULL;
+    _resetNodes(n->next, full);
+}
+
+// Settings all edges to false
+static void _resetEdges(struct _edge *e)
+{
+    if (!e)
+    {
+        return;
+    }
+
+    e->visited = false;
+
+    _resetEdges(e->next);
+}
+
+// Destroy edges
+static void _destroyEdges(struct _edge *e)
+{
+    if (!e)
+    {
+        return;
+    }
+
+    _destroyEdges(e->next);
+    free(e);
+}
+
+// Destroy nodes and edges
+static void _destroyNodes(struct _node *n)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    _destroyEdges(n->edges);
+    _destroyNodes(n->next);
+
+    if(n->data.status)
+    {
+        free(n->data.status);
+    }
+    if(n->data.gpsInfo)
+    {
+        free(n->data.gpsInfo);
+    }
     free(n);
 }

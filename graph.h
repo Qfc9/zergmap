@@ -11,14 +11,13 @@
 
 typedef struct _graph *graph;
 
-struct _node;
-
-
-void graphPrintNodes(graph g);
 graph graphCreate(void);
-void graphAddNode(graph g, union zergH zHead,struct gpsH gps);
-void graphPrint(graph g,char **map,size_t mapSz,char end);
+int graphAddNode(graph g, union zergH zHead, struct gpsH *gps);
+int graphAddStatus(graph g, union zergH zHead, struct statusH status);
+void graphPrintBadZerg(graph g);
+void graphPrintLowHP(graph g, int limit);
 void graphDestroy(graph g);
-void graphResetNodes(graph g);
+void graphRemoveBadNodes(graph g);
+void graphResetNodes(graph g, bool full);
 
 #endif

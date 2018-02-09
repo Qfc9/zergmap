@@ -9,7 +9,7 @@
 #include "zergHeaders.h"
 #include "util.h"
 
-#define R (6371.0 / 2.0)
+#define R 6371.0
 #define TO_RAD (3.1415926536 / 180)
 
 // https://rosettacode.org/wiki/Haversine_formula
