@@ -61,6 +61,7 @@ static void _printLowHP(struct _node *n, int limit, bool isLow);
 static void _addEdge(struct _node *a, struct _node *b, double weight);
 static struct _node *_findNode(struct _node *n, unsigned int id);
 static void _setHeavyEdges(struct _edge *e);
+static bool _setGPS(struct _node *n,  struct gpsH *gps);
 static void _setEdgeVisited(struct _edge *e, struct _node *n);
 static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps);
 static void _resetNodes(struct _node *n, bool full);
@@ -153,42 +154,63 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
         {
             return err;
         }
-
         if(_setNodeData(g->nodes, &zHead, gps))
         {
             printf("Skipping node, out of bounds payload!\n");
             free(g->nodes);
             g->nodes = NULL;
         }
+        g->nodes->next = NULL;
         return err;
     }
 
     // Adding a new node on the chain
     struct _node *curNode = g->nodes;
-    struct _node *newNode = calloc(1, sizeof(*newNode));
-    if (!newNode)
-    {
-        return err;
-    }
+    struct _node *newNode = _findNode(g->nodes, zHead.details.source);
+    bool new = true;
 
-    if(_setNodeData(newNode, &zHead, gps))
+    if(!newNode)
     {
-        printf("Skipping node, out of bounds payload!\n");
-        free(newNode);
-        return err;
+        newNode = calloc(1, sizeof(*newNode));
+        if (!newNode)
+        {
+            return err;
+        }  
+        if(_setNodeData(newNode, &zHead, gps))
+        {
+            printf("Skipping node, out of bounds payload!\n");
+            free(newNode);
+            return err;
+        }
+        newNode->next = NULL;
+    }
+    else
+    {
+        if (newNode->data.gpsInfo)
+        {
+            return 2;
+        }
+
+        if(_setGPS(newNode, gps))
+        {
+            free(newNode);
+            return 2;
+        }
+        new = false;
     }
 
    _validEdge(newNode, curNode);
 
-    if (newNode->data.zHead.details.source == curNode->data.zHead.details.source)
+    if (newNode->data.zHead.details.source == curNode->data.zHead.details.source && new)
     {
         err = 2;
+        return err;
     }
 
     // Making sure we are at the last node on the chain
     while (curNode->next)
-    {
-        if (newNode->data.zHead.details.source == curNode->data.zHead.details.source)
+    {   
+        if (newNode->data.zHead.details.source == curNode->data.zHead.details.source && new)
         {
             err = 2;
         }
@@ -196,7 +218,10 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
         _validEdge(newNode, curNode);
     }
 
-    curNode->next = newNode;
+    if (new)
+    {
+        curNode->next = newNode;
+    }
 
     return err;
 }
@@ -364,6 +389,42 @@ static void _printLowHP(struct _node *n, int limit, bool isLow)
     _printLowHP(n->next, limit, isLow);
 }
 
+static bool _setGPS(struct _node *n,  struct gpsH *gps)
+{
+    if (!n)
+    {
+        return true;
+    }
+
+    gps->altitude = gps->altitude * 1.8288;
+
+    if (gps->latitude > 90.0 || gps->latitude < -90.0)
+    {
+        return true;
+    }
+    else if (gps->longitude > 180.0 || gps->longitude < -180.0)
+    {
+        return true;
+    }
+    else if (gps->altitude > 7000 ||  gps->altitude < -7000)
+    {
+        return true;
+    }
+
+    n->data.gpsInfo = calloc(1, sizeof(*n->data.gpsInfo));
+    if (!n->data.gpsInfo)
+    {
+        return true;
+    }
+
+    setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
+    setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
+
+    *n->data.gpsInfo = *gps;
+
+    return false;
+}
+
 static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
 {
     if (!n)
@@ -377,31 +438,10 @@ static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
     if (gps)
     {
 
-        gps->altitude = gps->altitude * 1.8288;
-
-        if (gps->latitude > 90.0 || gps->latitude < -90.0)
+        if(_setGPS(n, gps))
         {
             return true;
         }
-        else if (gps->longitude > 180.0 || gps->longitude < -180.0)
-        {
-            return true;
-        }
-        else if (gps->altitude > 7000 ||  gps->altitude < -7000)
-        {
-            return true;
-        }
-
-        n->data.gpsInfo = calloc(1, sizeof(*n->data.gpsInfo));
-        if (!n->data.gpsInfo)
-        {
-            return true;
-        }
-
-        setGPSDMS(&(*gps).latitude, &n->data.gps.lat);
-        setGPSDMS(&(*gps).longitude, &n->data.gps.lon);
-
-        *n->data.gpsInfo = *gps;
     }
 
     n->data.zHead = *zHead;
