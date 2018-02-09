@@ -59,6 +59,7 @@ static void _printEdges(struct _edge *e);
 static void _printBadZerg(struct _stack *s);
 static void _printLowHP(struct _node *n, int limit, bool isLow);
 static void _addEdge(struct _node *a, struct _node *b, double weight);
+static void _addInvalid(struct _stack *s, struct _node *n);
 static struct _node *_findNode(struct _node *n, unsigned int id);
 static void _setHeavyEdges(struct _edge *e);
 static bool _setGPS(struct _node *n,  struct gpsH *gps);
@@ -226,6 +227,51 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
     return err;
 }
 
+static bool _findOnStack(struct _stack *s, unsigned int id)
+{
+    if (!s || !s->node)
+    {
+        return false;
+    }
+
+    if(s->node->data.zHead.details.source == id)
+    {
+        return true;
+    }
+
+    return _findOnStack(s->next, id);
+}
+
+static void _addFromInvalid(struct _node *n, struct _stack *s, size_t *sz)
+{
+    if (!n || !s || !sz)
+    {
+        return;
+    }
+
+    if (n->invalid && !_findOnStack(s, n->data.zHead.details.source))
+    {
+        if (!s->node)
+        {
+            struct _stack *temp = n->invalid->next;
+            s->node = n->invalid->node;
+            free(n->invalid);
+            n->invalid = temp;
+            (*sz)++;
+        }
+        while(n->invalid)
+        {
+            struct _stack *temp = n->invalid->next;
+            _addInvalid(s, n->invalid->node);
+            free(n->invalid);
+            n->invalid = temp;
+            (*sz)++;
+        }
+    }
+
+    _addFromInvalid( n->next, s, sz);
+}
+
 void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZergSz)
 {
     if (!g || !n || !badZerg || !badZergSz)
@@ -241,8 +287,6 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
 
     size_t totalNodes = 1;
     s->node = g->nodes;
-
-    _printStack(n->invalid);
     
     graphResetNodes(g, true);
     for (int i = 0; i < 2; i++)
@@ -263,6 +307,8 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
             }
             (*badZergSz)++;
             badZerg->node = n;
+            badZerg->next->next = NULL;
+            badZerg->next->node = NULL;
 
             break;
         }
@@ -291,13 +337,16 @@ void graphPrintBadZerg(graph g)
     {
         return;
     }
+    badZerg->node = NULL;
+    badZerg->next = NULL;
 
     size_t badZergSz = 0;
 
-    _printNodes(g->nodes);
+    // _printNodes(g->nodes);
     printf("\n");
 
     analyzeMap(g, g->nodes->next, badZerg, &badZergSz);
+    _addFromInvalid(g->nodes, badZerg, &badZergSz);
     
     if (badZergSz > (g->totalNodes/2))
     {
@@ -476,7 +525,7 @@ static void _printStack(struct _stack *s)
         return;
     }
 
-    printf("(%.4lf, %.4lf)\n", s->node->data.gps->latitude, s->node->data.gps->longitude);
+    printf("(%u)\n", s->node->data.zHead.details.source);
 
     _printStack(s->next);
 }
@@ -598,26 +647,26 @@ static void _printEdges(struct _edge *e)
     _printEdges(e->next);
 }
 
-static void _addInvalid(struct _stack *a, struct _node *b)
+static void _addInvalid(struct _stack *s, struct _node *n)
 {
-    if (!a || !b)
+    if (!s || !n)
     {
         return;
     }
 
-    if (!a->next)
+    if (!s->next)
     {
-        a->next = calloc(1, sizeof(*a->next));
-        if (!a->next)
+        s->next = calloc(1, sizeof(*s->next));
+        if (!s->next)
         {
             return;
         }
-        a->next->node = b;
-        a->next->next = NULL;
+        s->next->node = n;
+        s->next->next = NULL;
         return;
     }
 
-    _addInvalid(a->next, b);
+    _addInvalid(s->next, n);
 }
 
 static void _validEdge(struct _node *a, struct _node *b)
@@ -954,6 +1003,10 @@ static void _destroyNodes(struct _node *n)
     if(n->data.gps)
     {
         free(n->data.gps);
+    }
+    if (n->invalid)
+    {
+        _freeStack(n->invalid);
     }
     free(n);
 }
