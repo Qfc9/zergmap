@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
     }
     graphRemoveBadNodes(zergGraph);
     graphAnalyzeMap(zergGraph);
-    graphPrintBadZerg(zergGraph);
+    graphPrint(zergGraph);
     graphPrintLowHP(zergGraph, minHp);
     graphDestroy(zergGraph);
     return 0;

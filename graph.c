@@ -257,20 +257,17 @@ static void _addFromInvalid(struct _node *n, struct _stack *s, size_t *sz)
 
     if (n->invalid && !_findOnStack(s, n->data.zHead.details.source))
     {
+        struct _stack *temp = n->invalid;
         if (!s->node)
         {
-            struct _stack *temp = n->invalid->next;
-            s->node = n->invalid->node;
-            free(n->invalid);
-            n->invalid = temp;
+            s->node = temp->node;
+            temp = temp->next;
             (*sz)++;
         }
-        while(n->invalid)
+        while(temp)
         {
-            struct _stack *temp = n->invalid->next;
-            _addInvalid(s, n->invalid->node);
-            free(n->invalid);
-            n->invalid = temp;
+            _addInvalid(s, temp->node);
+            temp = temp->next;
             (*sz)++;
         }
     }
@@ -278,9 +275,9 @@ static void _addFromInvalid(struct _node *n, struct _stack *s, size_t *sz)
     _addFromInvalid( n->next, s, sz);
 }
 
-void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZergSz)
+void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
 {
-    if (!g || !n || !badZerg || !badZergSz)
+    if (!g || !start || !end || !badZerg || !badZergSz)
     {
         return;
     }
@@ -292,7 +289,7 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
     }
 
     size_t totalNodes = 1;
-    s->node = g->nodes;
+    s->node = start;
     
     graphResetNodes(g, true);
     for (int i = 0; i < 2; i++)
@@ -301,10 +298,10 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
         s->node->weight = 0;
         s->node->parent = NULL;
         _dijktra(s, s->node->edges, &totalNodes);
-        _disableRoute(n);
-        //_printFastest(n);
+        _disableRoute(end);
+        //_printFastest(end);
 
-        if (!n->parent && (_notAdjacent(g->nodes->edges, n) || (totalNodes > 2 && n->edgeCount < 2)))
+        if ((((!end->parent) && (_notAdjacent(start->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
         {
             badZerg->next = calloc(1, sizeof(*badZerg));
             if (!badZerg->next)
@@ -312,7 +309,7 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
                 return;
             }
             (*badZergSz)++;
-            badZerg->node = n;
+            badZerg->node = end;
             badZerg->next->next = NULL;
             badZerg->next->node = NULL;
 
@@ -322,44 +319,100 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
 
     free(s);
 
-    if (!n->parent && _notAdjacent(g->nodes->edges, n))
+    if ((((!end->parent) && (_notAdjacent(start->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
     {
-        analyzeMap(g, n->next, badZerg->next, badZergSz);
+        analyzeMap(g, start, end->next, badZerg->next, badZergSz);
         return;
     }
 
-    analyzeMap(g, n->next, badZerg, badZergSz);
+    analyzeMap(g, start, end->next, badZerg, badZergSz);
+}
+
+struct _stack *badStack(graph g, struct _stack *s)
+{
+    if (!g || !s || !s->node)
+    {
+        return NULL;
+    }
+
+    size_t sz = 0;
+    struct _stack  *badS = calloc(1, sizeof(*badS));
+    if (!badS)
+    {
+        return NULL;
+    }
+    badS->node = NULL;
+    badS->next = NULL;
+
+    analyzeMap(g, s->node, g->nodes->next, badS, &sz);
+    _addFromInvalid(g->nodes, badS, &sz);
+
+    if (sz < g->totalBad)
+    {
+        g->totalBad = sz;
+    }
+    else
+    {
+        _freeStack(badS);
+        badS = NULL;
+    }
+
+    struct _stack *returnS = badStack(g, s->next);
+
+    if (sz == g->totalBad)
+    {
+        return badS;
+    }
+    else
+    {
+        if(badS)
+        {
+            _freeStack(badS);
+        }
+        return returnS;
+    }
+
+    return NULL;
 }
 
 void graphAnalyzeMap(graph g)
 {
-    struct _stack  *badZerg = calloc(1, sizeof(*badZerg));
-    if (!badZerg)
+    struct _stack  *badNodes = calloc(1, sizeof(*badNodes));
+    if (!badNodes)
     {
         return;
     }
-    badZerg->node = NULL;
-    badZerg->next = NULL;
+    badNodes->node = NULL;
+    badNodes->next = NULL;
 
-    size_t badZergSz = 0;
+    size_t badSz = 0;
 
     // _printNodes(g->nodes);
     printf("\n");
 
-    analyzeMap(g, g->nodes->next, badZerg, &badZergSz);
-    _addFromInvalid(g->nodes, badZerg, &badZergSz);
+    analyzeMap(g, g->nodes, g->nodes->next, badNodes, &badSz);
+    _addFromInvalid(g->nodes, badNodes, &badSz);
 
-    g->totalBad = badZergSz;
-    g->badNodes = badZerg;
+    g->totalBad = badSz;
+    g->badNodes = badNodes;
+
+    if (g->totalBad > 1)
+    {
+        struct _stack *newBadNodes = badStack(g, g->badNodes);
+        if (newBadNodes)
+        {
+            _freeStack(g->badNodes);
+            g->badNodes = newBadNodes;
+        }
+    }
 }
 
-void graphPrintBadZerg(graph g)
+void graphPrint(graph g)
 {
     if (!g || !g->nodes)
     {
         return;
-    }
-    
+    }    
     if (g->totalBad > (g->totalNodes/2))
     {
         printf("TOO MANY CHANGES REQUIRED\n");
@@ -368,14 +421,11 @@ void graphPrintBadZerg(graph g)
     {
         printf("Network Alterations:\n");
         _printBadZerg(g->badNodes);
-        g->badNodes = NULL;
     }
     else
     {
         printf("ALL ZERG ARE IN POSITION\n");
     }
-
-    _freeStack(g->badNodes);
 }
 
 void graphPrintLowHP(graph g, int limit)
@@ -396,6 +446,7 @@ void graphRemoveBadNodes(graph g)
     {
         struct _node *freeMe = g->nodes;
         g->nodes = g->nodes->next;
+        g->totalNodes--;
 
         _destroyNodes(freeMe);
     }
@@ -410,6 +461,7 @@ void graphDestroy(graph g)
     }
 
     _destroyNodes(g->nodes);
+    _freeStack(g->badNodes);
     free(g);
 }
 
@@ -580,20 +632,14 @@ static bool _notAdjacent(struct _edge *e, struct _node *n)
 
 static void _printBadZerg(struct _stack *s)
 {
-    if (!s)
+    if (!s || !s->node)
     {
-        return;
-    }
-    else if(!s->node)
-    {
-        free(s);
         return;
     }
 
     printf("Remove zerg #%u\n", s->node->data.zHead.details.source);
 
     _printBadZerg(s->next);
-    free(s);
 }
 
 static void _setEdgeVisited(struct _edge *e, struct _node *n)
