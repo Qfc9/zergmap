@@ -301,7 +301,7 @@ void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *
         _disableRoute(end);
         //_printFastest(end);
 
-        if ((((!end->parent) && (_notAdjacent(start->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
+        if ((((!end->parent) && (_notAdjacent(g->nodes->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
         {
             badZerg->next = calloc(1, sizeof(*badZerg));
             if (!badZerg->next)
@@ -319,7 +319,7 @@ void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *
 
     free(s);
 
-    if ((((!end->parent) && (_notAdjacent(start->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
+    if ((((!end->parent) && (_notAdjacent(g->nodes->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
     {
         analyzeMap(g, start, end->next, badZerg->next, badZergSz);
         return;
@@ -412,7 +412,10 @@ void graphPrint(graph g)
     if (!g || !g->nodes)
     {
         return;
-    }    
+    } 
+
+    printf("%zu, %zu\n", g->totalNodes, g->totalBad);
+
     if (g->totalBad > (g->totalNodes/2))
     {
         printf("TOO MANY CHANGES REQUIRED\n");
