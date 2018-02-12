@@ -155,13 +155,13 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
         {
             return err;
         }
+        g->nodes->next = NULL;
         if(_setNodeData(g->nodes, &zHead, gps))
         {
             printf("Skipping node, out of bounds payload!\n");
             free(g->nodes);
             g->nodes = NULL;
         }
-        g->nodes->next = NULL;
         return err;
     }
 
