@@ -13,6 +13,8 @@
 struct _graph
 {
     struct _node   *nodes;
+    struct _stack *badNodes;
+    size_t totalBad;
     size_t totalNodes;
     size_t totalEdges;
 } _graph;
@@ -83,6 +85,10 @@ static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, 
 graph graphCreate(void)
 {
     graph g = calloc(1, sizeof(*g));
+    g->badNodes = NULL;
+    g->totalBad = 0;
+    g->totalNodes = 0;
+    g->totalEdges = 0;
     if (!g)
     {
         return NULL;
@@ -325,13 +331,8 @@ void analyzeMap(graph g, struct _node *n, struct _stack *badZerg, size_t *badZer
     analyzeMap(g, n->next, badZerg, badZergSz);
 }
 
-void graphPrintBadZerg(graph g)
+void graphAnalyzeMap(graph g)
 {
-    if (!g || !g->nodes)
-    {
-        return;
-    }
-
     struct _stack  *badZerg = calloc(1, sizeof(*badZerg));
     if (!badZerg)
     {
@@ -347,23 +348,34 @@ void graphPrintBadZerg(graph g)
 
     analyzeMap(g, g->nodes->next, badZerg, &badZergSz);
     _addFromInvalid(g->nodes, badZerg, &badZergSz);
+
+    g->totalBad = badZergSz;
+    g->badNodes = badZerg;
+}
+
+void graphPrintBadZerg(graph g)
+{
+    if (!g || !g->nodes)
+    {
+        return;
+    }
     
-    if (badZergSz > (g->totalNodes/2))
+    if (g->totalBad > (g->totalNodes/2))
     {
         printf("TOO MANY CHANGES REQUIRED\n");
     }
-    else if(badZergSz > 0)
+    else if(g->totalBad > 0)
     {
         printf("Network Alterations:\n");
-        _printBadZerg(badZerg);
-        badZerg = NULL;
+        _printBadZerg(g->badNodes);
+        g->badNodes = NULL;
     }
     else
     {
         printf("ALL ZERG ARE IN POSITION\n");
     }
 
-    _freeStack(badZerg);
+    _freeStack(g->badNodes);
 }
 
 void graphPrintLowHP(graph g, int limit)
