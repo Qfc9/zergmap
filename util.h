@@ -20,6 +20,5 @@ void removeNonChar(char *str);
 int removeHeaderText(char *str);
 double dist(struct gpsH *a, struct gpsH *b);
 void setGPSDMS(double *direction, struct DMS *dms);
-bool cmpGps(struct GPS *a, struct GPS *b);
 
 #endif
