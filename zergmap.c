@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include "zergHeaders.h"
-#include "zergPrint.h"
 #include "netHeaders.h"
 #include "util.h"
 #include "graph.h"
@@ -255,6 +254,6 @@ int main(int argc, char *argv[])
 
     // Disassembling the graph
     graphDestroy(zergGraph);
-    
+
     return 0;
 }
