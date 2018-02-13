@@ -275,10 +275,28 @@ static void _addFromInvalid(struct _node *n, struct _stack *s, size_t *sz)
     _addFromInvalid( n->next, s, sz);
 }
 
+void setInvalidInactive(struct _stack *s)
+{
+    if (!s)
+    {
+        return;
+    }
+
+    s->node->visited = true;
+
+    setInvalidInactive(s->next);
+}
+
 void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
 {
     if (!g || !start || !end || !badZerg || !badZergSz)
     {
+        return;
+    }
+
+    if ((start->data.zHead.details.source == end->data.zHead.details.source) && start->invalid)
+    {
+        analyzeMap(g, start, end->next, badZerg, badZergSz);
         return;
     }
 
@@ -295,14 +313,16 @@ void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *
     for (int i = 0; i < 2; i++)
     {
         graphResetNodes(g, false);
+        setInvalidInactive(start->invalid);
         s->node->weight = 0;
         s->node->parent = NULL;
         _dijktra(s, s->node->edges, &totalNodes);
         _disableRoute(end);
         //_printFastest(end);
 
-        if ((((!end->parent) && (_notAdjacent(g->nodes->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
-        {
+        // (start->data.zHead.details.source == end->data.zHead.details.source)
+        if (((!end->parent) && ((_notAdjacent(g->nodes->edges, end)) || (totalNodes > 2 && end->edgeCount < 2))))
+        {   
             badZerg->next = calloc(1, sizeof(*badZerg));
             if (!badZerg->next)
             {
@@ -319,7 +339,7 @@ void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *
 
     free(s);
 
-    if ((((!end->parent) && (_notAdjacent(g->nodes->edges, end))) || (totalNodes > 2 && end->edgeCount < 2)) || (start->data.zHead.details.source == end->data.zHead.details.source))
+    if (badZerg->next)
     {
         analyzeMap(g, start, end->next, badZerg->next, badZergSz);
         return;
@@ -345,7 +365,7 @@ struct _stack *badStack(graph g, struct _stack *s)
     badS->next = NULL;
 
     analyzeMap(g, s->node, g->nodes->next, badS, &sz);
-    _addFromInvalid(g->nodes, badS, &sz);
+    //_addFromInvalid(g->nodes, badS, &sz);
 
     if (sz < g->totalBad)
     {
@@ -377,6 +397,11 @@ struct _stack *badStack(graph g, struct _stack *s)
 
 void graphAnalyzeMap(graph g)
 {
+    if (!g || !g->nodes)
+    {
+        return;
+    }
+
     struct _stack  *badNodes = calloc(1, sizeof(*badNodes));
     if (!badNodes)
     {
@@ -387,16 +412,18 @@ void graphAnalyzeMap(graph g)
 
     size_t badSz = 0;
 
-    // _printNodes(g->nodes);
+    //_printNodes(g->nodes);
     printf("\n");
 
     analyzeMap(g, g->nodes, g->nodes->next, badNodes, &badSz);
-    _addFromInvalid(g->nodes, badNodes, &badSz);
+    //_addFromInvalid(g->nodes, badNodes, &badSz);
+
+    //_printStack(badNodes);
 
     g->totalBad = badSz;
     g->badNodes = badNodes;
 
-    if (g->totalBad > 1)
+    if (g->totalBad > 0)
     {
         struct _stack *newBadNodes = badStack(g, g->badNodes);
         if (newBadNodes)
@@ -413,8 +440,6 @@ void graphPrint(graph g)
     {
         return;
     } 
-
-    printf("%zu, %zu\n", g->totalNodes, g->totalBad);
 
     if (g->totalBad > (g->totalNodes/2))
     {
@@ -766,6 +791,23 @@ static void _validEdge(struct _node *a, struct _node *b)
         {
             _addInvalid(a->invalid, b);
         }
+
+        if(!b->invalid)
+        {
+            b->invalid = calloc(1, sizeof(*b->invalid));
+            if (!b->invalid)
+            {
+                return;
+            }
+            b->invalid->node = a;
+            b->invalid->next = NULL;
+        }
+        else
+        {
+            _addInvalid(b->invalid, a);
+        }
+        a->visited = true;
+        b->visited = true;
         return;
     }
     _addEdge(a, b, trueDist);
@@ -1013,7 +1055,10 @@ static void _resetNodes(struct _node *n, bool full)
 
     if (full)
     {
-        n->visited = false;
+        if (!n->invalid)
+        {
+            n->visited = false;
+        }
         _resetEdges(n->edges);
     }
     n->weight = INITWEIGHT;
