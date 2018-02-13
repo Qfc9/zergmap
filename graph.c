@@ -62,7 +62,7 @@ static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNode
 static struct _stack *_smallestBadStack(graph g, struct _stack *s);
 
 // Analyzing the graph
-static void _analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz);
+static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz);
 
 // Verifying if an edge can be made
 static void _validEdge(struct _node *a, struct _node *b);
@@ -280,7 +280,7 @@ int graphAddStatus(graph g, union zergH zHead, struct statusH status)
 }
 
 // Analyzing the map for bad nodes
-void graphAnalyzeMap(graph g)
+void graphAnalyzeGraph(graph g)
 {
     if (!g || !g->nodes)
     {
@@ -300,7 +300,7 @@ void graphAnalyzeMap(graph g)
     size_t badSz = 0;
 
     // Analyzing the map
-    _analyzeMap(g, g->nodes, g->nodes->next, badNodes, &badSz);
+    _analyzeGraph(g, g->nodes, g->nodes->next, badNodes, &badSz);
 
     // Setting sz and stack to the graph
     g->totalBad = badSz;
@@ -394,7 +394,7 @@ void graphDestroy(graph g)
 }
 
 // Analyzing the graph
-static void _analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
+static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
 {
     if (!g || !start || !end || !badZerg || !badZergSz)
     {
@@ -404,7 +404,7 @@ static void _analyzeMap(graph g, struct _node *start, struct _node *end, struct 
     // Skipping nodes that are scanning for itself but have invalid items
     if ((start->data.zHead.details.source == end->data.zHead.details.source) && start->invalid)
     {
-        _analyzeMap(g, start, end->next, badZerg, badZergSz);
+        _analyzeGraph(g, start, end->next, badZerg, badZergSz);
         return;
     }
 
@@ -455,11 +455,11 @@ static void _analyzeMap(graph g, struct _node *start, struct _node *end, struct 
     // Going to the next stack place if an item was added
     if (badZerg->next)
     {
-        _analyzeMap(g, start, end->next, badZerg->next, badZergSz);
+        _analyzeGraph(g, start, end->next, badZerg->next, badZergSz);
         return;
     }
 
-    _analyzeMap(g, start, end->next, badZerg, badZergSz);
+    _analyzeGraph(g, start, end->next, badZerg, badZergSz);
 }
 
 // Returning the smallest stack of bad nodes after analyzing a given stack
@@ -481,7 +481,7 @@ static struct _stack *_smallestBadStack(graph g, struct _stack *s)
     badS->next = NULL;
 
     // Analyzing for bad nodes
-    _analyzeMap(g, s->node, g->nodes->next, badS, &sz);
+    _analyzeGraph(g, s->node, g->nodes->next, badS, &sz);
 
     // Saving if the new stack is smaller
     if (sz < g->totalBad)

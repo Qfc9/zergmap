@@ -21,7 +21,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps);
 int graphAddStatus(graph g, union zergH zHead, struct statusH status);
 
 // Analyzing the map for bad nodes
-void graphAnalyzeMap(graph g);
+void graphAnalyzeGraph(graph g);
 
 // Printing bad nodes
 void graphPrint(graph g);
