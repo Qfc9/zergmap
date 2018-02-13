@@ -56,8 +56,6 @@ struct _stack
 static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNodes);
 static void _validEdge(struct _node *a, struct _node *b);
 static bool _notAdjacent(struct _edge *e, struct _node *n);
-static void _printNodes(struct _node *n);
-static void _printEdges(struct _edge *e);
 static void _printBadZerg(struct _stack *s);
 static void _printLowHP(struct _node *n, int limit, bool isLow);
 static void _addEdge(struct _node *a, struct _node *b, double weight);
@@ -74,12 +72,6 @@ static void _freeStack(struct _stack *s);
 static void _disableRoute(struct _node *n);
 static void _destroyNodes(struct _node *n);
 static void _destroyEdges(struct _edge *e);
-
-// Can be removed
-static void _printStack(struct _stack *s);
-static void _printFastest(struct _node *n);
-static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, unsigned int id);
-
 
 // Creating Graph
 graph graphCreate(void)
@@ -233,60 +225,6 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
     return err;
 }
 
-static bool _findOnStack(struct _stack *s, unsigned int id)
-{
-    if (!s || !s->node)
-    {
-        return false;
-    }
-
-    if(s->node->data.zHead.details.source == id)
-    {
-        return true;
-    }
-
-    return _findOnStack(s->next, id);
-}
-
-static void _addFromInvalid(struct _node *n, struct _stack *s, size_t *sz)
-{
-    if (!n || !s || !sz)
-    {
-        return;
-    }
-
-    if (n->invalid && !_findOnStack(s, n->data.zHead.details.source))
-    {
-        struct _stack *temp = n->invalid;
-        if (!s->node)
-        {
-            s->node = temp->node;
-            temp = temp->next;
-            (*sz)++;
-        }
-        while(temp)
-        {
-            _addInvalid(s, temp->node);
-            temp = temp->next;
-            (*sz)++;
-        }
-    }
-
-    _addFromInvalid( n->next, s, sz);
-}
-
-void setInvalidInactive(struct _stack *s)
-{
-    if (!s)
-    {
-        return;
-    }
-
-    s->node->visited = true;
-
-    setInvalidInactive(s->next);
-}
-
 void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
 {
     if (!g || !start || !end || !badZerg || !badZergSz)
@@ -313,14 +251,11 @@ void analyzeMap(graph g, struct _node *start, struct _node *end, struct _stack *
     for (int i = 0; i < 2; i++)
     {
         graphResetNodes(g, false);
-        setInvalidInactive(start->invalid);
         s->node->weight = 0;
         s->node->parent = NULL;
         _dijktra(s, s->node->edges, &totalNodes);
         _disableRoute(end);
-        //_printFastest(end);
 
-        // (start->data.zHead.details.source == end->data.zHead.details.source)
         if (((!end->parent) && ((_notAdjacent(g->nodes->edges, end)) || (totalNodes > 2 && end->edgeCount < 2))))
         {   
             badZerg->next = calloc(1, sizeof(*badZerg));
@@ -365,7 +300,6 @@ struct _stack *badStack(graph g, struct _stack *s)
     badS->next = NULL;
 
     analyzeMap(g, s->node, g->nodes->next, badS, &sz);
-    //_addFromInvalid(g->nodes, badS, &sz);
 
     if (sz < g->totalBad)
     {
@@ -412,13 +346,9 @@ void graphAnalyzeMap(graph g)
 
     size_t badSz = 0;
 
-    //_printNodes(g->nodes);
     printf("\n");
 
     analyzeMap(g, g->nodes, g->nodes->next, badNodes, &badSz);
-    //_addFromInvalid(g->nodes, badNodes, &badSz);
-
-    //_printStack(badNodes);
 
     g->totalBad = badSz;
     g->badNodes = badNodes;
@@ -610,18 +540,6 @@ static struct _node *_findNode(struct _node *n, unsigned int id)
     return _findNode(n->next, id);
 }
 
-static void _printStack(struct _stack *s)
-{
-    if (!s)
-    {
-        return;
-    }
-
-    printf("(%u)\n", s->node->data.zHead.details.source);
-
-    _printStack(s->next);
-}
-
 static void _disableRoute(struct _node *n)
 {
     if(!n)
@@ -684,53 +602,6 @@ static void _setEdgeVisited(struct _edge *e, struct _node *n)
     }
 
     _setEdgeVisited(e->next, n);
-}
-
-static void _printFastest(struct _node *n)
-{
-    if(!n)
-    {
-        return;
-    }
-
-    printf("%u[%.4lf]", n->data.zHead.details.source, n->weight);
-    if(n->parent)
-    {
-       printf(" -> "); 
-    }
-    else
-    {
-        printf("\n");
-    }
-
-    _printFastest(n->parent);
-}
-
-static void _printNodes(struct _node *n)
-{
-    if(!n)
-    {
-        return;
-    }
-
-    printf("%u[%zu]   \t", n->data.zHead.details.source,  n->edgeCount);
-
-    _printEdges(n->edges);
-
-    _printNodes(n->next);
-}
-
-static void _printEdges(struct _edge *e)
-{
-    if(!e)
-    {
-        printf("\n");
-        return;
-    }
-
-    printf("%u[%.2lf]\t", e->node->data.zHead.details.source, e->weight);
-
-    _printEdges(e->next);
 }
 
 static void _addInvalid(struct _stack *s, struct _node *n)
@@ -940,109 +811,6 @@ static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNode
         // Going to the next edge
         _dijktra(stack, edge->next, totalNodes);
     }
-}
-
-// My DFS algorithm
-static bool _DFS(struct _stack *stack, struct _stack *path, struct _edge *edge, unsigned int id)
-{
-    if (!edge || !stack || !path)
-    {
-        return false;
-    }
-
-    // Free Path and Stack if there is a next
-    if (path->next)
-    {
-        free(path->next);
-        path->next = NULL;
-    }
-    if (stack->next)
-    {
-        free(stack->next);
-        stack->next = NULL;
-    }
-
-    // If I haven't visited this node
-    if (edge->node->visited == false)
-    {
-        // Making next stack
-        stack->next = calloc(1, sizeof(_stack));
-        if (!stack->next)
-        {
-            return false;
-        }
-
-        // Adding stack data
-        stack->next->node = edge->node;
-        stack->next->node->visited = true;
-
-        // Making next path
-        path->next = calloc(1, sizeof(_stack));
-        if (!path->next)
-        {
-            return false;
-        }
-
-        // Adding and comparing path data
-        path->next->node = stack->next->node;
-        if (stack->next->node->data.zHead.details.source == id)
-        {
-            return true;
-        }
-
-        // If there is another edges
-        if (_DFS(stack->next, path->next, stack->next->node->edges, id))
-        {
-            return true;
-        }
-
-        // If there isn't a next make one
-        if (!path->next)
-        {
-            path->next = calloc(1, sizeof(_stack));
-            if (!path->next)
-            {
-                free(stack->next);
-                stack->next = NULL;
-                return false;
-            }
-        }
-
-        // Going to the next edge on the last stack item
-        path->next->node = stack->node;
-        if (_DFS(stack, path->next, stack->node->edges, id))
-        {
-            return true;
-            if (stack->next)
-            {
-                free(stack->next);
-                stack->next = NULL;
-            }
-        }
-
-        // Free Path and Stack if there is a next
-        if (path->next)
-        {
-            free(path->next);
-            path->next = NULL;
-        }
-    }
-    // If I have visited this node
-    else
-    {
-        // If there is another edge
-        if (edge->next)
-        {
-            // Going to the next edge
-            if (_DFS(stack, path, edge->next, id))
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
-
 }
 
 // Settings all nodes to false
