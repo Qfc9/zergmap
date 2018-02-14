@@ -550,8 +550,9 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
         // Adding bad items to the stack
         // if ((!end->parent) && ((_notAdjacent(start->edges, end)) || (totalNodes > 2 && end->edgeCount < 2)) && !_findOnStack(badZerg, end->data.zHead.details.source))
         //((_notAdjacent(s->node->edges, end) && totalNodes != 2) || (totalNodes > 2 && end->edgeCount < 2))
-        if (((!end->parent) 
-            && (_notAdjacent(s->node->edges, end) || totalNodes - *badZergSz > 2))
+        if ((!end->parent) 
+            && ((_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 2))
+            || (!_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 2)))
             && !_findOnStack(badZerg, end->data.zHead.details.source))
         {   
             if (!badZerg->node)
@@ -618,12 +619,7 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
     {
         g->totalBad = sz;
     }
-    // Freeing the new stack if it is bigger
-    else
-    {
-        _freeStack(badS);
-        badS = NULL;
-    }
+
 
     // Recursive
     struct _stack *returnS = _smallestBadStack(g, n->next);
@@ -636,10 +632,7 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
     // Returning the new stack if that is smaller
     else
     {
-        if(badS)
-        {
-            _freeStack(badS);
-        }
+        _freeStack(badS);
         return returnS;
     }
 
