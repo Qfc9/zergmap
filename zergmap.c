@@ -10,8 +10,6 @@
 #include "util.h"
 #include "graph.h"
 
-#define MINPCAPLENGTH 54
-
 int main(int argc, char *argv[])
 {
     // Initializing Variables
@@ -55,7 +53,6 @@ int main(int argc, char *argv[])
     graph zergGraph = graphCreate();
     if (!zergGraph)
     {
-        fprintf(stderr, "Calloc Error!\n");
         return 1;
     }
 
@@ -97,12 +94,6 @@ int main(int argc, char *argv[])
             switch(getZType(&zHeader))
             {
                 case 1:
-                    if((zHeader.details.length - 24) < 0)
-                    {
-                        err = 1;
-                        break;
-                    }
-
                     // Adding a status to the graph
                     setZStatus(fp, &zStatus, sizeof(zStatus));
                     err = graphAddStatus(zergGraph, zHeader, zStatus);
