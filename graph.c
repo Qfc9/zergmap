@@ -572,9 +572,9 @@ static struct _stack *_smallestBadStack(graph g, struct _stack *s)
 
     // Analyzing for bad nodes
     // _printBadNodes(badS);
-    printf("%d\n", s->node->data.zHead.details.source);
-    _addFromInvalid(g->nodes, &badS, &sz);
-    // _printBadNodes(badS);
+    // printf("%d\n", s->node->data.zHead.details.source);
+    // _addFromInvalid(g->nodes, &badS, &sz);
+    _printBadNodes(badS);
     _analyzeGraph(g, s->node, g->nodes, badS, &sz);
      // _printBadNodes(badS);
     // printf("%zu\n", sz);
