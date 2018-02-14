@@ -61,6 +61,7 @@ bool notValidGPS(struct gpsH *gps)
 }
 
 /*
+    To find the distance between two gps coordinates
     Dist() is from the following website
     URL: https://rosettacode.org/wiki/Haversine_formula
     Author: unknown
@@ -92,6 +93,7 @@ void setGPSDMS(double *direction, struct DMS *dms)
     dms->seconds = round(3600 * (*direction - dms->degrees) - 60 * dms->minutes);
 }
 
+// Writing to a file
 void safeWrite(FILE *fp, void *writeIt, size_t sz, const char *msg)
 {
     if(fwrite(writeIt, sz, 1, fp) == 0)
@@ -102,6 +104,7 @@ void safeWrite(FILE *fp, void *writeIt, size_t sz, const char *msg)
     }
 }
 
+// Reading from a file
 void safeRead(FILE *fp, void *readIt, size_t sz, const char *msg)
 {
     if(fread(readIt, sz, 1, fp) == 0)
@@ -112,6 +115,7 @@ void safeRead(FILE *fp, void *readIt, size_t sz, const char *msg)
     }
 }
 
+// Skipping ahead in a file
 void skipAhead(FILE *fp, int err, const char *msg, int skip)
 {
     if(err)
