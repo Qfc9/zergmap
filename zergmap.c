@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include "zergHeaders.h"
-#include "zergPrint.h"
 #include "netHeaders.h"
 #include "util.h"
 #include "graph.h"
@@ -201,11 +200,12 @@ int main(int argc, char *argv[])
                         break;
                     }
 
+                    // Adding a status to the graph
                     setZStatus(fp, &zStatus, sizeof(zStatus));
                     err = graphAddStatus(zergGraph, zHeader, zStatus);
-
                     break;
                 case 3:
+                    // Adding a Zerg to the graph
                     setZGPS(fp, &zGPS, sizeof(zGPS));
                     err = graphAddNode(zergGraph, zHeader, &zGPS);
                     break;
@@ -241,9 +241,19 @@ int main(int argc, char *argv[])
             return 2;
         }
     }
+
+    // Removing incomplete zerg items
     graphRemoveBadNodes(zergGraph);
-    graphPrintBadZerg(zergGraph);
+
+    // Analyzing the graph
+    graphAnalyzeGraph(zergGraph);
+
+    // Printing Graph information
+    graphPrint(zergGraph);
     graphPrintLowHP(zergGraph, minHp);
+
+    // Disassembling the graph
     graphDestroy(zergGraph);
+
     return 0;
 }

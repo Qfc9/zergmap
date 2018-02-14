@@ -6,7 +6,6 @@
 #include <ctype.h>
 
 #include "zergHeaders.h"
-#include "zergPrint.h"
 #include "util.h"
 
 // Initializing variables

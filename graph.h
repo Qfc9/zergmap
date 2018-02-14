@@ -11,13 +11,28 @@
 
 typedef struct _graph *graph;
 
+// Creating and returning a graph
 graph graphCreate(void);
+
+// Adding a node to the graph
 int graphAddNode(graph g, union zergH zHead, struct gpsH *gps);
+
+// Adding a status to a node
 int graphAddStatus(graph g, union zergH zHead, struct statusH status);
-void graphPrintBadZerg(graph g);
+
+// Analyzing the map for bad nodes
+void graphAnalyzeGraph(graph g);
+
+// Printing bad nodes
+void graphPrint(graph g);
+
+// Printing low hp nodes
 void graphPrintLowHP(graph g, int limit);
-void graphDestroy(graph g);
+
+// Removing incomplete nodes
 void graphRemoveBadNodes(graph g);
-void graphResetNodes(graph g, bool full);
+
+// Freeing the graph
+void graphDestroy(graph g);
 
 #endif
