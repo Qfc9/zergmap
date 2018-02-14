@@ -79,20 +79,11 @@ static void _printLowHP(struct _node *n, int limit, bool isLow);
 // Adding an edge between nodes
 static void _addEdge(struct _node *a, struct _node *b, double weight);
 
-
-
-static void _addFromInvalid(struct _node *n, struct _stack **s, size_t *sz);
-
-
-// Adding a node to the invalid stack
-static void _addInvalid(struct _stack *s, struct _node *n);
+// Adding a node to the stack
+static void _addToStack(struct _stack *s, struct _node *n);
 
 // Finding and returning a node with the matching id
 static struct _node *_findNode(struct _node *n, unsigned int id);
-
-
-static bool _findOnStack(struct _stack *s, unsigned int id);
-
 
 // Setting a heavy edge for nodes with 3+ edges
 static void _setHeavyEdges(struct _edge *e);
@@ -142,33 +133,6 @@ graph graphCreate(void)
 
     return g;
 }
-
-void printEdges(struct _edge *e)
-{
-    if (!e)
-    {
-        return;
-    }
-
-    printf("%d[%f]\t", e->node->data.zHead.details.source, e->weight);
-
-    printEdges(e->next);
-}
-
-void printNodes(struct _node *n)
-{
-    if (!n)
-    {
-        return;
-    }
-
-    printf("\n");
-    printf("%d [%zu]\t", n->data.zHead.details.source, n->edgeCount);
-    printEdges(n->edges);
-
-    printNodes(n->next);
-}
-
 
 // Adding a node to the graph
 int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
@@ -323,50 +287,8 @@ void graphAnalyzeGraph(graph g)
         return;
     }
 
-    //printNodes(g->nodes);
-
-    // Making a stack for bad nodes
-    // struct _stack  *badNodes = calloc(1, sizeof(*badNodes));
-    // if (!badNodes)
-    // {
-    //     return;
-    // }
-    // badNodes->node = NULL;
-    // badNodes->next = NULL;
-
-    // Size of the stack
-    // size_t badSz = 0;
-
-    // Running every invalid item on the stack to get analyzed
+    // Getting the smallest amount of bad nodes to remove
     g->badNodes = _smallestBadStack(g, g->nodes);
-    // struct _stack *newBadNodes = _smallestBadStack(g, g->nodes);
-    // if (newBadNodes)
-    // {
-    //     _freeStack(badNodes);
-    //     g->badNodes = newBadNodes;
-    // }
-
-    // // Analyzing the map
-    // _addFromInvalid(g->nodes, &badNodes, &badSz);
-    // _analyzeGraph(g, g->nodes, g->nodes->next, badNodes, &badSz);
-
-    // printNodes(g->nodes);
-
-    // // Setting sz and stack to the graph
-    // g->totalBad = badSz;
-    // g->badNodes = badNodes;
-
-    // // If their are items on the stack
-    // if (g->totalBad > 0)
-    // {
-    //     // Running every invalid item on the stack to get analyzed
-    //     struct _stack *newBadNodes = _smallestBadStack(g, g->nodes);
-    //     if (newBadNodes)
-    //     {
-    //         _freeStack(badNodes);
-    //         g->badNodes = newBadNodes;
-    //     }
-    // }
 }
 
 // Printing bad nodes
@@ -443,72 +365,6 @@ void graphDestroy(graph g)
     free(g);
 }
 
-static bool _findOnStack(struct _stack *s, unsigned int id)
-{
-    if (!s || !s->node)
-    {
-        return false;
-    }
-
-    if(s->node->data.zHead.details.source == id)
-    {
-        return true;
-    }
-
-    return _findOnStack(s->next, id);
-}
-
-static void _addFromInvalid(struct _node *n, struct _stack **s, size_t *sz)
-{
-    if (!n || !(*s) || !sz)
-    {
-        return;
-    }
-
-    if (n->invalid && !_findOnStack((*s), n->data.zHead.details.source))
-    {
-        struct _stack *temp = n->invalid;
-        if (!(*s)->node)
-        {
-            (*s)->node = temp->node;
-            temp = temp->next;
-            (*sz)++;
-        }
-        while(temp)
-        {
-            if (temp->node->invalid && !_findOnStack((*s), temp->node->data.zHead.details.source))
-            {
-                _addInvalid((*s), temp->node);
-                (*sz)++;
-            }
-            temp = temp->next;
-        }
-    }
-
-    _addFromInvalid( n->next, s, sz);
-}
-
-static void _printFastest(struct _node *n)
-{
-    if(!n)
-    {
-        return;
-    }
-
-    printf("%u[%.4lf]", n->data.zHead.details.source, n->weight);
-    if(n->parent)
-    {
-       printf(" -> "); 
-    }
-    else
-    {
-        printf("\n");
-    }
-
-    _printFastest(n->parent);
-}
-
-
 // Analyzing the graph
 static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
 {
@@ -545,16 +401,13 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
 
         // Disabling a known fastest path
         _disableRoute(end);
-        //_printFastest(end);
 
         // Adding bad items to the stack
-        // if ((!end->parent) && ((_notAdjacent(start->edges, end)) || (totalNodes > 2 && end->edgeCount < 2)) && !_findOnStack(badZerg, end->data.zHead.details.source))
-        //((_notAdjacent(s->node->edges, end) && totalNodes != 2) || (totalNodes > 2 && end->edgeCount < 2))
-        if ((!end->parent) 
-            && ((_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 2))
-            || (!_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 2)))
-            && !_findOnStack(badZerg, end->data.zHead.details.source))
+        if ((!end->parent) &&
+           ((_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 2)) ||
+           (!_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 3))))
         {   
+            // Creating the first item on the stack
             if (!badZerg->node)
             {
                 badZerg->next = calloc(1, sizeof(*badZerg));
@@ -566,9 +419,10 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
                 badZerg->next->next = NULL;
                 badZerg->next->node = NULL;
             }
+            // Adding to the stack
             else
             {
-                _addInvalid(badZerg, end);
+                _addToStack(badZerg, end);
             }
             (*badZergSz)++;
 
@@ -610,9 +464,7 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
     badS->next = NULL;
 
     // Analyzing for bad nodes
-    // _printBadNodes(badS);
     _analyzeGraph(g, n, g->nodes, badS, &sz);
-    // printf("%zu\n", sz);
 
     // Saving if the new stack is smaller
     if ((sz < g->totalBad) || (g->totalBad == 0))
@@ -620,8 +472,7 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
         g->totalBad = sz;
     }
 
-
-    // Recursive
+    // Recursively running itself
     struct _stack *returnS = _smallestBadStack(g, n->next);
 
     // Returning current bad stack if it's the smallest
@@ -838,8 +689,8 @@ static void _setEdgeVisited(struct _edge *e, struct _node *n)
     _setEdgeVisited(e->next, n);
 }
 
-// Adding a node to the invalid stack
-static void _addInvalid(struct _stack *s, struct _node *n)
+// Adding a node to the stack
+static void _addToStack(struct _stack *s, struct _node *n)
 {
     if (!s || !n)
     {
@@ -859,7 +710,7 @@ static void _addInvalid(struct _stack *s, struct _node *n)
         return;
     }
 
-    _addInvalid(s->next, n);
+    _addToStack(s->next, n);
 }
 
 // Verifying if an edge can be made
@@ -902,7 +753,7 @@ static void _validEdge(struct _node *a, struct _node *b)
         }
         else
         {
-            _addInvalid(a->invalid, b);
+            _addToStack(a->invalid, b);
         }
 
         // Setting the invalid item on B
@@ -918,7 +769,7 @@ static void _validEdge(struct _node *a, struct _node *b)
         }
         else
         {
-            _addInvalid(b->invalid, a);
+            _addToStack(b->invalid, a);
         }
         a->visited = true;
         b->visited = true;
@@ -955,6 +806,7 @@ static void _addEdge(struct _node *a, struct _node *b, double weight)
         return;
     }
 
+    // Making new edge
     struct _edge *newEdge = calloc(1, sizeof(*newEdge));
     if (!newEdge)
     {
