@@ -79,11 +79,20 @@ static void _printLowHP(struct _node *n, int limit, bool isLow);
 // Adding an edge between nodes
 static void _addEdge(struct _node *a, struct _node *b, double weight);
 
+
+
+static void _addFromInvalid(struct _node *n, struct _stack **s, size_t *sz);
+
+
 // Adding a node to the invalid stack
 static void _addInvalid(struct _stack *s, struct _node *n);
 
 // Finding and returning a node with the matching id
 static struct _node *_findNode(struct _node *n, unsigned int id);
+
+
+static bool _findOnStack(struct _stack *s, unsigned int id);
+
 
 // Setting a heavy edge for nodes with 3+ edges
 static void _setHeavyEdges(struct _edge *e);
@@ -132,6 +141,32 @@ graph graphCreate(void)
     }
 
     return g;
+}
+
+void printEdges(struct _edge *e)
+{
+    if (!e)
+    {
+        return;
+    }
+
+    printf("%d\t", e->node->data.zHead.details.source);
+
+    printEdges(e->next);
+}
+
+void printNodes(struct _node *n)
+{
+    if (!n)
+    {
+        return;
+    }
+
+    printf("\n");
+    printf("%d [%zu]\t", n->data.zHead.details.source, n->edgeCount);
+    printEdges(n->edges);
+
+    printNodes(n->next);
 }
 
 // Adding a node to the graph
@@ -287,6 +322,8 @@ void graphAnalyzeGraph(graph g)
         return;
     }
 
+    //printNodes(g->nodes);
+
     // Making a stack for bad nodes
     struct _stack  *badNodes = calloc(1, sizeof(*badNodes));
     if (!badNodes)
@@ -300,6 +337,7 @@ void graphAnalyzeGraph(graph g)
     size_t badSz = 0;
 
     // Analyzing the map
+    _addFromInvalid(g->nodes, &badNodes, &badSz);
     _analyzeGraph(g, g->nodes, g->nodes->next, badNodes, &badSz);
 
     // Setting sz and stack to the graph
@@ -310,10 +348,10 @@ void graphAnalyzeGraph(graph g)
     if (g->totalBad > 0)
     {
         // Running every invalid item on the stack to get analyzed
-        struct _stack *newBadNodes = _smallestBadStack(g, g->badNodes);
+        struct _stack *newBadNodes = _smallestBadStack(g, badNodes);
         if (newBadNodes)
         {
-            _freeStack(g->badNodes);
+            _freeStack(badNodes);
             g->badNodes = newBadNodes;
         }
     }
@@ -393,6 +431,51 @@ void graphDestroy(graph g)
     free(g);
 }
 
+static bool _findOnStack(struct _stack *s, unsigned int id)
+{
+    if (!s || !s->node)
+    {
+        return false;
+    }
+
+    if(s->node->data.zHead.details.source == id)
+    {
+        return true;
+    }
+
+    return _findOnStack(s->next, id);
+}
+
+static void _addFromInvalid(struct _node *n, struct _stack **s, size_t *sz)
+{
+    if (!n || !(*s) || !sz)
+    {
+        return;
+    }
+
+    if (n->invalid && !_findOnStack((*s), n->data.zHead.details.source))
+    {
+        struct _stack *temp = n->invalid;
+        if (!(*s)->node)
+        {
+            (*s)->node = temp->node;
+            temp = temp->next;
+            (*sz)++;
+        }
+        while(temp)
+        {
+            if (temp->node->invalid && !_findOnStack((*s), temp->node->data.zHead.details.source))
+            {
+                _addInvalid((*s), temp->node);
+                (*sz)++;
+            }
+            temp = temp->next;
+        }
+    }
+
+    _addFromInvalid( n->next, s, sz);
+}
+
 // Analyzing the graph
 static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
 {
@@ -431,17 +514,24 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
         _disableRoute(end);
 
         // Adding bad items to the stack
-        if (((!end->parent) && ((_notAdjacent(g->nodes->edges, end)) || (totalNodes > 2 && end->edgeCount < 2))))
+        if (((!end->parent) && ((_notAdjacent(g->nodes->edges, end)) || (totalNodes > 2 && end->edgeCount < 2))) && !_findOnStack(badZerg, end->data.zHead.details.source))
         {   
-            badZerg->next = calloc(1, sizeof(*badZerg));
-            if (!badZerg->next)
+            if (!badZerg->node)
             {
-                return;
+                badZerg->next = calloc(1, sizeof(*badZerg));
+                if (!badZerg->next)
+                {
+                    return;
+                }
+                badZerg->node = end;
+                badZerg->next->next = NULL;
+                badZerg->next->node = NULL;
+            }
+            else
+            {
+                _addInvalid(badZerg, end);
             }
             (*badZergSz)++;
-            badZerg->node = end;
-            badZerg->next->next = NULL;
-            badZerg->next->node = NULL;
 
             break;
         }
@@ -452,12 +542,12 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
 
     free(s);
 
-    // Going to the next stack place if an item was added
-    if (badZerg->next)
-    {
-        _analyzeGraph(g, start, end->next, badZerg->next, badZergSz);
-        return;
-    }
+    // // Going to the next stack place if an item was added
+    // if (badZerg->next)
+    // {
+    //     _analyzeGraph(g, start, end->next, badZerg->next, badZergSz);
+    //     return;
+    // }
 
     _analyzeGraph(g, start, end->next, badZerg, badZergSz);
 }
@@ -481,7 +571,13 @@ static struct _stack *_smallestBadStack(graph g, struct _stack *s)
     badS->next = NULL;
 
     // Analyzing for bad nodes
-    _analyzeGraph(g, s->node, g->nodes->next, badS, &sz);
+    // _printBadNodes(badS);
+    printf("%d\n", s->node->data.zHead.details.source);
+    _addFromInvalid(g->nodes, &badS, &sz);
+    // _printBadNodes(badS);
+    _analyzeGraph(g, s->node, g->nodes, badS, &sz);
+     // _printBadNodes(badS);
+    // printf("%zu\n", sz);
 
     // Saving if the new stack is smaller
     if (sz < g->totalBad)
