@@ -20,5 +20,9 @@ void removeNonChar(char *str);
 int removeHeaderText(char *str);
 double dist(struct gpsH *a, struct gpsH *b);
 void setGPSDMS(double *direction, struct DMS *dms);
+bool notValidGPS(struct gpsH *gps);
+bool isAltitude(float a);
+bool isLatitude(double l);
+bool isLongitude(double l);
 
 #endif

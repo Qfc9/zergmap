@@ -690,7 +690,7 @@ static void _printLowHP(struct _node *n, int limit, bool isLow)
 // Setting GPS info
 static bool _setGPS(struct _node *n,  struct gpsH *gps)
 {
-    if (!n)
+    if (!n || !gps)
     {
         return true;
     }
@@ -698,15 +698,7 @@ static bool _setGPS(struct _node *n,  struct gpsH *gps)
     gps->altitude = gps->altitude * 1.8288;
 
     // GPS bounds checks
-    if (gps->latitude > 90.0 || gps->latitude < -90.0)
-    {
-        return true;
-    }
-    else if (gps->longitude > 180.0 || gps->longitude < -180.0)
-    {
-        return true;
-    }
-    else if (gps->altitude > 11265.4 ||  gps->altitude < -11265.4)
+    if (notValidGPS(gps))
     {
         return true;
     }

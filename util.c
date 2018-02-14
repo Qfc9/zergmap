@@ -2,6 +2,7 @@
 #define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -11,6 +12,52 @@
 
 #define R 6371.0
 #define TO_RAD (3.1415926536 / 180)
+
+// longitude
+bool isLongitude(double l)
+{
+    if (l > 180.0 || l < -180.0 || isnan(l))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+// latitude
+bool isLatitude(double l)
+{
+    if (l > 90.0 || l < -90.0 || isnan(l))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+// altitude
+bool isAltitude(float a)
+{
+    if (a > 11265.4 ||  a < -11265.4 || isnan(a))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+bool notValidGPS(struct gpsH *gps)
+{
+    if (!gps)
+    {
+        return true;
+    }
+    if(isLatitude(gps->latitude) || isLongitude(gps->longitude) || isAltitude(gps->altitude))
+    {
+        return true;
+    }
+    return false;
+}
 
 /*
     Dist() is from the following website
