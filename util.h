@@ -14,31 +14,31 @@ void safeWrite(FILE *fp, void *writeIt, size_t sz, const char *msg);
 // Skipping ahead in a file
 void skipAhead(FILE *fp, int err, const char *msg, int skip);
 
-// Swaping Endianness of 64 bit numbers
+// Swapping of 64 bit numbers
 void s64BitSwap(double *reverseMe);
 
-// Swaping Endianness of 32 bit numbers
+// Swapping of 32 bit numbers
 void s32BitSwap(void *reverseMe);
 
-// Swaping Endianness of 24 bit numbers
+// Swapping of 24 bit numbers
 int s24BitSwap(int *reverseMe);
 
-// Swaping Endianness of 32 bit unsigned numbers
+// Swapping of 32 bit unsigned numbers
 unsigned int u32BitSwap(unsigned int swapMe);
 
-// Swaping Endianness of 24 bit unsigned numbers
+// Swapping of 24 bit unsigned numbers
 unsigned int u24BitSwap(unsigned int swapMe);
 
-// Swaping Endianness of 16 bit unsigned numbers
+// Swapping of 16 bit unsigned numbers
 unsigned int u16BitSwap(unsigned int swapMe);
 
-// Swaping Endianness of 8 bit unsigned numbers
+// Swapping of 8 bit unsigned numbers
 unsigned int u8BitSwap(unsigned int swapMe);
 
 // Make everything in a string lowercase
 void toLowerStr(char *str);
 
-// Removes non alpha numermeric chars
+// Removes non alpha numeric chars
 void removeNonChar(char *str);
 
 // Removes all text before the ':'
