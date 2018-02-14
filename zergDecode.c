@@ -11,6 +11,27 @@
 
 #define MINPCAPLENGTH 54
 
+bool invalidPCAPHeader(FILE *fp, int *swap)
+{
+    struct pcapFileH pHeader;
+
+    // Reading the first header of the file
+    if(setPcapHead(fp, &pHeader, "Packet is corrupted or empty"))
+    {
+        (*swap) = 1;
+    }
+
+    // Checking for valid PCAP Header
+    if((pHeader.majVer != PCAPHEADMAJ) || (pHeader.minVer != PCAPHEADMIN) || (pHeader.linkType != PCAPHEADLINK))
+    {
+        fprintf(stderr, "Invalid PCAP Version\n");
+        fclose(fp);
+        return true;
+    }
+
+    return false;
+}
+
 bool invalidZergHeader(FILE *fp, union zergH *zHeader, unsigned int *skipBytes)
 {
     struct udpH udpHeader;

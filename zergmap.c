@@ -16,7 +16,6 @@ int main(int argc, char *argv[])
 {
     // Initializing Variables
     FILE *fp;
-    struct pcapFileH pHeader;
     struct pcapPacketH ppHeader;
     union zergH zHeader;
     struct gpsH zGPS;
@@ -72,17 +71,9 @@ int main(int argc, char *argv[])
         }
 
         // Reading the first header of the file
-        if(setPcapHead(fp, &pHeader, "Packet is corrupted or empty"))
+        if (invalidPCAPHeader(fp, &swap))
         {
-            swap = 1;
-        }
-
-        // Checking for valid PCAP Header
-        if((pHeader.majVer != PCAPHEADMAJ) || (pHeader.minVer != PCAPHEADMIN) || (pHeader.linkType != PCAPHEADLINK))
-        {
-            fprintf(stderr, "Invalid PCAP Version\n");
             graphDestroy(zergGraph);
-            fclose(fp);
             return 1;
         }
 
