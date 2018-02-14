@@ -18,7 +18,6 @@ int main(int argc, char *argv[])
     FILE *fp;
     struct pcapFileH pHeader;
     struct pcapPacketH ppHeader;
-    struct udpH udpHeader;
     union zergH zHeader;
     struct gpsH zGPS;
     struct statusH zStatus;
@@ -93,29 +92,13 @@ int main(int argc, char *argv[])
             skipBytes = ppHeader.length;
             dataLength = ftell(fp);
 
-
-
             if(invalidEthernetHeader(fp, ppHeader.length, &skipBytes))
             {
                 continue;
             }
 
-
-
-            // Reading UDP and Zerg
-            setUDPHead(fp, &udpHeader, "UDP Header");
-            skipBytes -= sizeof(udpHeader);
-            if(udpHeader.dport != ZERGPORT)
+            if(invalidZergHeader(fp, &zHeader, &skipBytes))
             {
-                skipAhead(fp, 1, "Invalid Destination port", skipBytes);
-                continue;
-            }
-
-            setZergH(fp, &zHeader, "Zerg Header");
-            skipBytes -= sizeof(zHeader);
-            if(zHeader.details.version != 1)
-            {
-                skipAhead(fp, 1, "Invalid Zerg Version", skipBytes);
                 continue;
             }
 

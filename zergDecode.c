@@ -11,6 +11,30 @@
 
 #define MINPCAPLENGTH 54
 
+bool invalidZergHeader(FILE *fp, union zergH *zHeader, unsigned int *skipBytes)
+{
+    struct udpH udpHeader;
+
+    // Reading UDP and Zerg
+    setUDPHead(fp, &udpHeader, "UDP Header");
+    (*skipBytes) -= sizeof(udpHeader);
+    if(udpHeader.dport != ZERGPORT)
+    {
+        skipAhead(fp, 1, "Invalid Destination port", (*skipBytes));
+        return true;
+    }
+
+    setZergH(fp, zHeader, "Zerg Header");
+    (*skipBytes) -= sizeof(*zHeader);
+    if((*zHeader).details.version != 1)
+    {
+        skipAhead(fp, 1, "Invalid Zerg Version", (*skipBytes));
+        return true;
+    }
+
+    return false;
+}
+
 bool invalidEthernetHeader(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
 {
     union ethernetH eHeader;
