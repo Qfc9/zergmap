@@ -627,6 +627,10 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
     // Returning current bad stack if it's the smallest
     if (sz == g->totalBad)
     {
+        if (returnS)
+        {
+            _freeStack(returnS);
+        }
         return badS;
     }
     // Returning the new stack if that is smaller
