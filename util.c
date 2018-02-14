@@ -13,7 +13,7 @@
 #define R 6371.0
 #define TO_RAD (3.1415926536 / 180)
 
-// longitude
+// Checking if double is in bounds for longitude
 bool isLongitude(double l)
 {
     if (l > 180.0 || l < -180.0 || isnan(l))
@@ -24,7 +24,7 @@ bool isLongitude(double l)
     return false;
 }
 
-// latitude
+// Checking if double is in bounds for latitude
 bool isLatitude(double l)
 {
     if (l > 90.0 || l < -90.0 || isnan(l))
@@ -35,7 +35,7 @@ bool isLatitude(double l)
     return false;
 }
 
-// altitude
+// Checking if float is in bounds for altitude
 bool isAltitude(float a)
 {
     if (a > 11265.4 ||  a < -11265.4 || isnan(a))
@@ -46,6 +46,7 @@ bool isAltitude(float a)
     return false;
 }
 
+// Returning if is it a valid GPS struct or not
 bool notValidGPS(struct gpsH *gps)
 {
     if (!gps)
