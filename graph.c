@@ -79,6 +79,9 @@ static void _printLowHP(struct _node *n, int limit, bool isLow);
 // Adding an edge between nodes
 static void _addEdge(struct _node *a, struct _node *b, double weight);
 
+// Creating and returning a stack
+static struct _stack *_createStack(struct _node *n);
+
 // Adding a node to the stack
 static void _addToStack(struct _stack *s, struct _node *n);
 
@@ -380,14 +383,9 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
         return;
     }
 
-    struct _stack  *s = calloc(1, sizeof(*s));
-    if (!s)
-    {
-        return;
-    }
+    struct _stack  *s = _createStack(start);
 
     size_t totalNodes = 1;
-    s->node = start;
     
     // Reseting all stats on nodes
     _resetNodes(g->nodes, true);
@@ -410,14 +408,8 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
             // Creating the first item on the stack
             if (!badZerg->node)
             {
-                badZerg->next = calloc(1, sizeof(*badZerg));
-                if (!badZerg->next)
-                {
-                    return;
-                }
+                badZerg->next = _createStack(NULL);
                 badZerg->node = end;
-                badZerg->next->next = NULL;
-                badZerg->next->node = NULL;
             }
             // Adding to the stack
             else
@@ -455,13 +447,7 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
 
     // Making a stack and size counter
     size_t sz = 0;
-    struct _stack  *badS = calloc(1, sizeof(*badS));
-    if (!badS)
-    {
-        return NULL;
-    }
-    badS->node = NULL;
-    badS->next = NULL;
+    struct _stack *badS = _createStack(NULL);
 
     // Analyzing for bad nodes
     _analyzeGraph(g, n, g->nodes, badS, &sz);
@@ -713,6 +699,20 @@ static void _addToStack(struct _stack *s, struct _node *n)
     _addToStack(s->next, n);
 }
 
+// Creating and returning a stack
+static struct _stack *_createStack(struct _node *n)
+{
+    struct _stack *s = calloc(1, sizeof(*s));
+    if (!s)
+    {
+        return NULL;
+    }
+    s->node = n;
+    s->next = NULL;
+
+    return s;
+}
+
 // Verifying if an edge can be made
 static void _validEdge(struct _node *a, struct _node *b)
 {
@@ -743,13 +743,7 @@ static void _validEdge(struct _node *a, struct _node *b)
         // Setting the invalid item on A
         if (!a->invalid)
         {
-            a->invalid = calloc(1, sizeof(*a->invalid));
-            if (!a->invalid)
-            {
-                return;
-            }
-            a->invalid->node = b;
-            a->invalid->next = NULL;
+            a->invalid = _createStack(b);
         }
         else
         {
@@ -759,13 +753,7 @@ static void _validEdge(struct _node *a, struct _node *b)
         // Setting the invalid item on B
         if(!b->invalid)
         {
-            b->invalid = calloc(1, sizeof(*b->invalid));
-            if (!b->invalid)
-            {
-                return;
-            }
-            b->invalid->node = a;
-            b->invalid->next = NULL;
+            b->invalid = _createStack(a);
         }
         else
         {
