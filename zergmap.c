@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Looping through all the files
     for (int i = optind; i < argc; i++)
     {
         // Attempting to open the file given
@@ -80,11 +81,13 @@ int main(int argc, char *argv[])
             skipBytes = ppHeader.length;
             dataLength = ftell(fp);
 
-            if(invalidEthernetHeader(fp, ppHeader.length, &skipBytes))
+            // Validating the Ethernet and IP headers
+            if(invalidEthOrIp(fp, ppHeader.length, &skipBytes))
             {
                 continue;
             }
 
+            // Validating the UDP and Zerg Header
             if(invalidZergHeader(fp, &zHeader, &skipBytes))
             {
                 continue;

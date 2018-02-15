@@ -56,7 +56,7 @@ bool invalidZergHeader(FILE *fp, union zergH *zHeader, unsigned int *skipBytes)
     return false;
 }
 
-bool invalidEthernetHeader(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
+bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
 {
     union ethernetH eHeader;
     struct ipv4H ipHeader;
