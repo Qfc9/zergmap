@@ -181,7 +181,8 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
         if (!newNode)
         {
             return err;
-        }  
+        }
+        // Setting node data
         if(_setNodeData(newNode, &zHead, gps))
         {
             printf("Skipping node, out of bounds payload!\n");
@@ -453,7 +454,7 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
     _analyzeGraph(g, n, g->nodes, badS, &sz);
 
     // Saving if the new stack is smaller
-    if ((sz < g->totalBad) || (g->totalBad == 0))
+    if ((sz < g->totalBad && sz != 0) || (g->totalBad == 0))
     {
         g->totalBad = sz;
     }

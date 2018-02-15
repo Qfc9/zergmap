@@ -65,7 +65,7 @@ bool notValidGPS(struct gpsH *gps)
     Dist() is from the following website
     URL: https://rosettacode.org/wiki/Haversine_formula
     Author: unknown
-    Date: unknown
+    Date: Feb 5th 2018
 */
 double dist(struct gpsH *a, struct gpsH *b)
 {
