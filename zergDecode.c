@@ -118,6 +118,20 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
                 return true;
             }
         }
+
+        if (ipHeader.proto != IP6INIP4)
+        {
+            //ip6Header
+            setIPv6Head(fp, &ip6Header, "IPv6 Header");
+            (*skipBytes) -= sizeof(ip6Header);
+
+            // Checking if valid IP Header
+            if(ip6Header.nextHead != UDP)
+            {
+                skipAhead(fp, 1, "Invalid Transport Layer protocol", (*skipBytes));
+                return true;
+            }
+        }
     }
     // Checking if it is IPv6
     else if(eHeader.ethInfo.type == ETHIPV6)
