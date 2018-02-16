@@ -1,0 +1,26 @@
+.\" Manpage for Zergmap.
+.\" Contact Elijah Harmon to correct errors or typos.
+.TH zergmap 1 "15 February 2018" "1.0" "User Commands"
+.SH NAME
+zergmap \- outputs zergs that need to be destroyed to make a fully connected network and zergs with low health
+.SH SYNOPSIS
+USAGE: ./zergmap [-h] <PCAP_FILE> [PCAP_FILES...]
+.SH DESCRIPTION
+zergmap reads in any amount of pcap files that are greater than one. It will read any Zerg data found in the pcaps and make a graph. It will then use that graph to figure out the minimum amount of zergs that need to be destroyed in order to have a fully connected network. It will print out the zergs that need to destoryed and also any zerg that have low hp (below 10% unless specified).
+
+.SH OPTIONS
+.TP
+.BR \-h " " \(dqinteger"   
+Sets the new minimum HP level.
+
+
+.SH RETURN VALUES
+0   All is good
+
+1   Encountered a problem
+
+2   Duplicate Zerg Ids
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Elijah Harmon
