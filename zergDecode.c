@@ -120,7 +120,7 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
             }
         }
 
-        if (ipHeader.proto != IP6INIP4)
+        if (ipHeader.proto == IP6INIP4)
         {
             if(_readIPV6(fp, skipBytes))
             {
