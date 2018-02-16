@@ -20,7 +20,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps);
 // Adding a status to a node
 int graphAddStatus(graph g, union zergH zHead, struct statusH status);
 
-// Analyzing the map for bad nodes
+// Analyzing the graph for bad nodes
 void graphAnalyzeGraph(graph g);
 
 // Printing bad nodes
