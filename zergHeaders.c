@@ -9,17 +9,23 @@
 #include "util.h"
 
 // Initializing variables
-const char *zergHKey[4] = { "version", "sequence", "from", "to" };
-const char *zergMsgKey[1] = { "message" };
-const char *zergStatKey[5] = { "name", "hp", "type", "armor", "maxspeed" };
-const char *zergGPSKey[6] = { "latitude", "longitude", "altitude", "bearing", "speed", "accuracy" };
-const char *zergComKey[2] = { "par1", "par2" };
+const char     *zergHKey[4] = { "version", "sequence", "from", "to" };
+const char     *zergMsgKey[1] = { "message" };
+const char     *zergStatKey[5] = { "name", "hp", "type", "armor", "maxspeed" };
+const char     *zergGPSKey[6] =
+    { "latitude", "longitude", "altitude", "bearing", "speed", "accuracy" };
+const char     *zergComKey[2] = { "par1", "par2" };
 
 // Reading in data based off it's length
-int setZMsg(char *msg, int length, FILE *fp)
+int
+setZMsg(
+    char *msg,
+    int length,
+    FILE * fp)
 {
-    char *tmp = malloc(length);
-    if(!tmp)
+    char           *tmp = malloc(length);
+
+    if (!tmp)
     {
         free(tmp);
         return 1;
@@ -34,12 +40,16 @@ int setZMsg(char *msg, int length, FILE *fp)
 }
 
 // Reading in and setting Command Struct
-int setZCommand(FILE *fp, struct commandH *command, size_t length)
+int
+setZCommand(
+    FILE * fp,
+    struct commandH *command,
+    size_t length)
 {
     fread(command, length, 1, fp);
 
     command->command = u16BitSwap(command->command);
-    if((command->command % 2) == 0 || command->command == 0)
+    if ((command->command % 2) == 0 || command->command == 0)
     {
         fseek(fp, -6, SEEK_CUR);
     }
@@ -50,9 +60,13 @@ int setZCommand(FILE *fp, struct commandH *command, size_t length)
 }
 
 // Reading in and setting Header Stuct
-void setZergH(FILE *fp, union zergH *zHead, const char *msg)
+void
+setZergH(
+    FILE * fp,
+    union zergH *zHead,
+    const char *msg)
 {
- 
+
     safeRead(fp, zHead, sizeof(*zHead), msg);
 
     zHead->details.length = u24BitSwap(zHead->details.length);
@@ -62,9 +76,13 @@ void setZergH(FILE *fp, union zergH *zHead, const char *msg)
 }
 
 // Reading in and setting Status Header
-int setZStatus(FILE *fp, struct statusH *status, size_t length)
+int
+setZStatus(
+    FILE * fp,
+    struct statusH *status,
+    size_t length)
 {
- 
+
     fread(status, length, 1, fp);
 
     status->hp = u24BitSwap(status->hp);
@@ -77,7 +95,11 @@ int setZStatus(FILE *fp, struct statusH *status, size_t length)
 }
 
 // Reading in and setting Zerg Header
-int setZGPS(FILE *fp, struct gpsH *gps, size_t length)
+int
+setZGPS(
+    FILE * fp,
+    struct gpsH *gps,
+    size_t length)
 {
 
     fread(gps, length, 1, fp);
@@ -94,7 +116,9 @@ int setZGPS(FILE *fp, struct gpsH *gps, size_t length)
 }
 
 // Returing the header Type
-int getZType(union zergH *zHead)
+int
+getZType(
+    union zergH *zHead)
 {
     return zHead->details.type;
 }

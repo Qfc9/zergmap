@@ -14,35 +14,35 @@
 struct _graph
 {
     struct _node   *nodes;
-    struct _stack *badNodes;
-    size_t totalBad;
-    size_t totalNodes;
-    size_t totalEdges;
+    struct _stack  *badNodes;
+    size_t          totalBad;
+    size_t          totalNodes;
+    size_t          totalEdges;
 } _graph;
 
 struct _data
 {
-    union zergH zHead;
+    union zergH     zHead;
     struct statusH *status;
-    struct gpsH *gps;
+    struct gpsH    *gps;
 } _data;
 
 struct _node
 {
-    size_t edgeCount;
-    struct _data data;
-    bool visited;
-    double weight;
+    size_t          edgeCount;
+    struct _data    data;
+    bool            visited;
+    double          weight;
     struct _node   *parent;
-    struct _stack *invalid;
+    struct _stack  *invalid;
     struct _edge   *edges;
     struct _node   *next;
 } _node;
 
 struct _edge
 {
-    double weight;
-    bool visited;
+    double          weight;
+    bool            visited;
     struct _node   *node;
     struct _edge   *next;
 } _edge;
@@ -56,75 +56,120 @@ struct _stack
 // Initializing Static Functions
 
 // Dijkstra Algorithm
-static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNodes);
+static void     _dijktra(
+    struct _stack *stack,
+    struct _edge *edge,
+    size_t * totalNodes);
 
 // Returning the smallest stack of bad nodes after analyzing a given stack
-static struct _stack *_smallestBadStack(graph g, struct _node *n);
+static struct _stack *_smallestBadStack(
+    graph g,
+    struct _node *n);
 
 // Analyzing the graph
-static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz);
+static void     _analyzeGraph(
+    graph g,
+    struct _node *start,
+    struct _node *end,
+    struct _stack *badZerg,
+    size_t * badZergSz);
 
 // Verifying if an edge can be made
-static void _validEdge(struct _node *a, struct _node *b);
+static void     _validEdge(
+    struct _node *a,
+    struct _node *b);
 
 // Checking if the edge and node are adjacent
-static bool _notAdjacent(struct _edge *e, struct _node *n);
+static bool     _notAdjacent(
+    struct _edge *e,
+    struct _node *n);
 
 // Printing bad nodes
-static void _printBadNodes(struct _stack *s);
+static void     _printBadNodes(
+    struct _stack *s);
 
 // Printing nodes with low HP
-static void _printLowHP(struct _node *n, int limit, bool isLow);
+static void     _printLowHP(
+    struct _node *n,
+    int limit,
+    bool isLow);
 
 // Adding an edge between nodes
-static void _addEdge(struct _node *a, struct _node *b, double weight);
+static void     _addEdge(
+    struct _node *a,
+    struct _node *b,
+    double weight);
 
 // Creating and returning a stack
-static struct _stack *_createStack(struct _node *n);
+static struct _stack *_createStack(
+    struct _node *n);
 
 // Adding a node to the stack
-static void _addToStack(struct _stack *s, struct _node *n);
+static void     _addToStack(
+    struct _stack *s,
+    struct _node *n);
 
 // Finding and returning a node with the matching id
-static struct _node *_findNode(struct _node *n, unsigned int id);
+static struct _node *_findNode(
+    struct _node *n,
+    unsigned int id);
 
 // Setting a heavy edge for nodes with 3+ edges
-static void _setHeavyEdges(struct _edge *e);
+static void     _setHeavyEdges(
+    struct _edge *e);
 
 // Setting GPS info
-static bool _setGPS(struct _node *n,  struct gpsH *gps);
+static bool     _setGPS(
+    struct _node *n,
+    struct gpsH *gps);
 
 // Marking the edge as visited
-static void _setEdgeVisited(struct _edge *e, struct _node *n);
+static void     _setEdgeVisited(
+    struct _edge *e,
+    struct _node *n);
 
 // Setting the node data
-static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps);
+static bool     _setNodeData(
+    struct _node *n,
+    union zergH *zHead,
+    struct gpsH *gps);
 
 // Reseting the node data
-static void _resetNodes(struct _node *n, bool full);
+static void     _resetNodes(
+    struct _node *n,
+    bool full);
 
 // Reseting the edge data
-static void _resetEdges(struct _edge *e);
+static void     _resetEdges(
+    struct _edge *e);
 
 // Removing bad nodes
-static void _removeBadNodes(struct _node *n);
+static void     _removeBadNodes(
+    struct _node *n);
 
 // Freeing a stack
-static void _freeStack(struct _stack *s);
+static void     _freeStack(
+    struct _stack *s);
 
 // Disabling a route for Dijkstra
-static void _disableRoute(struct _node *n);
+static void     _disableRoute(
+    struct _node *n);
 
 // Freeing nodes and all their data
-static void _destroyNodes(struct _node *n);
+static void     _destroyNodes(
+    struct _node *n);
 
 // Freeing Edges
-static void _destroyEdges(struct _edge *e);
+static void     _destroyEdges(
+    struct _edge *e);
 
 // Creating and returning a graph
-graph graphCreate(void)
+graph
+graphCreate(
+    void)
 {
-    graph g = calloc(1, sizeof(*g));
+    graph           g = calloc(1, sizeof(*g));
+
     g->badNodes = NULL;
     g->totalBad = 0;
     g->totalNodes = 0;
@@ -138,9 +183,14 @@ graph graphCreate(void)
 }
 
 // Adding a node to the graph
-int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
+int
+graphAddNode(
+    graph g,
+    union zergH zHead,
+    struct gpsH *gps)
 {
-    int err = 0;
+    int             err = 0;
+
     if (!g)
     {
         return err;
@@ -160,7 +210,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
 
         // Setting node data
         g->nodes->next = NULL;
-        if(_setNodeData(g->nodes, &zHead, gps))
+        if (_setNodeData(g->nodes, &zHead, gps))
         {
             printf("Skipping node, out of bounds payload!\n");
             free(g->nodes);
@@ -170,12 +220,12 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
     }
 
     // Adding a new node on the chain
-    struct _node *curNode = g->nodes;
-    struct _node *newNode = _findNode(g->nodes, zHead.details.source);
-    bool new = true;
+    struct _node   *curNode = g->nodes;
+    struct _node   *newNode = _findNode(g->nodes, zHead.details.source);
+    bool            new = true;
 
     // If the node was not found make a new one
-    if(!newNode)
+    if (!newNode)
     {
         newNode = calloc(1, sizeof(*newNode));
         if (!newNode)
@@ -183,7 +233,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
             return err;
         }
         // Setting node data
-        if(_setNodeData(newNode, &zHead, gps))
+        if (_setNodeData(newNode, &zHead, gps))
         {
             printf("Skipping node, out of bounds payload!\n");
             free(newNode);
@@ -201,7 +251,7 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
         }
 
         // Setting gps data
-        if(_setGPS(newNode, gps))
+        if (_setGPS(newNode, gps))
         {
             free(newNode);
             return 2;
@@ -213,7 +263,8 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
     _validEdge(newNode, curNode);
 
     // Making sure the current node doesn't have the same id as the new node
-    if (newNode->data.zHead.details.source == curNode->data.zHead.details.source && new)
+    if (newNode->data.zHead.details.source ==
+        curNode->data.zHead.details.source && new)
     {
         err = 2;
         return err;
@@ -221,9 +272,10 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
 
     // Making sure we are at the last node on the chain
     while (curNode->next)
-    {   
+    {
         // Making sure the current node doesn't have the same id as the new node
-        if (newNode->data.zHead.details.source == curNode->data.zHead.details.source && new)
+        if (newNode->data.zHead.details.source ==
+            curNode->data.zHead.details.source && new)
         {
             err = 2;
         }
@@ -243,18 +295,23 @@ int graphAddNode(graph g, union zergH zHead, struct gpsH *gps)
 }
 
 // Adding a status to a node
-int graphAddStatus(graph g, union zergH zHead, struct statusH status)
+int
+graphAddStatus(
+    graph g,
+    union zergH zHead,
+    struct statusH status)
 {
-    int err = 0;
+    int             err = 0;
+
     if (!g)
     {
         return err;
     }
 
-    struct _node *found = NULL;
+    struct _node   *found = NULL;
 
     // If the node wasn't found
-    if(!(found = _findNode(g->nodes, zHead.details.source)))
+    if (!(found = _findNode(g->nodes, zHead.details.source)))
     {
         // Make a new node
         graphAddNode(g, zHead, NULL);
@@ -284,7 +341,9 @@ int graphAddStatus(graph g, union zergH zHead, struct statusH status)
 }
 
 // Analyzing the graph for bad nodes
-void graphAnalyzeGraph(graph g)
+void
+graphAnalyzeGraph(
+    graph g)
 {
     if (!g || !g->nodes)
     {
@@ -296,22 +355,24 @@ void graphAnalyzeGraph(graph g)
 }
 
 // Printing bad nodes
-void graphPrint(graph g)
+void
+graphPrint(
+    graph g)
 {
     if (!g || !g->nodes)
     {
         return;
-    } 
+    }
 
     printf("\n");
 
     // More than half the nodes are bad
-    if (g->totalBad > (g->totalNodes/2))
+    if (g->totalBad > (g->totalNodes / 2))
     {
         printf("TOO MANY CHANGES REQUIRED\n");
     }
     // If there is any bad nodes
-    else if(g->totalBad > 0)
+    else if (g->totalBad > 0)
     {
         printf("Network Alterations:\n");
         _printBadNodes(g->badNodes);
@@ -324,7 +385,10 @@ void graphPrint(graph g)
 }
 
 // Printing low hp nodes
-void graphPrintLowHP(graph g, int limit)
+void
+graphPrintLowHP(
+    graph g,
+    int limit)
 {
     if (!g || !g->nodes)
     {
@@ -336,7 +400,9 @@ void graphPrintLowHP(graph g, int limit)
 }
 
 // Removing incomplete nodes
-void graphRemoveBadNodes(graph g)
+void
+graphRemoveBadNodes(
+    graph g)
 {
     if (!g || !g->nodes)
     {
@@ -348,7 +414,8 @@ void graphRemoveBadNodes(graph g)
     // If node has no GPS data, remove it
     if (!g->nodes->data.gps)
     {
-        struct _node *freeMe = g->nodes;
+        struct _node   *freeMe = g->nodes;
+
         g->nodes = g->nodes->next;
         g->totalNodes--;
 
@@ -357,7 +424,9 @@ void graphRemoveBadNodes(graph g)
 }
 
 // Freeing the graph
-void graphDestroy(graph g)
+void
+graphDestroy(
+    graph g)
 {
     if (!g)
     {
@@ -370,7 +439,13 @@ void graphDestroy(graph g)
 }
 
 // Analyzing the graph
-static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struct _stack *badZerg, size_t *badZergSz)
+static void
+_analyzeGraph(
+    graph g,
+    struct _node *start,
+    struct _node *end,
+    struct _stack *badZerg,
+    size_t * badZergSz)
 {
     if (!g || !start || !end || !badZerg || !badZergSz)
     {
@@ -386,8 +461,8 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
 
     struct _stack  *s = _createStack(start);
 
-    size_t totalNodes = 1;
-    
+    size_t          totalNodes = 1;
+
     // Reseting all stats on nodes
     _resetNodes(g->nodes, true);
     for (int i = 0; i < 2; i++)
@@ -403,9 +478,11 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
 
         // Adding bad items to the stack
         if ((!end->parent) &&
-           ((_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 2)) ||
-           (!_notAdjacent(s->node->edges, end) && (totalNodes - *badZergSz > 3))))
-        {   
+            ((_notAdjacent(s->node->edges, end) &&
+              (totalNodes - *badZergSz > 2)) ||
+             (!_notAdjacent(s->node->edges, end) &&
+              (totalNodes - *badZergSz > 3))))
+        {
             // Creating the first item on the stack
             if (!badZerg->node)
             {
@@ -439,7 +516,10 @@ static void _analyzeGraph(graph g, struct _node *start, struct _node *end, struc
 }
 
 // Returning the smallest stack of bad nodes after analyzing a given stack
-static struct _stack *_smallestBadStack(graph g, struct _node *n)
+static struct _stack *
+_smallestBadStack(
+    graph g,
+    struct _node *n)
 {
     if (!g || !n)
     {
@@ -447,8 +527,8 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
     }
 
     // Making a stack and size counter
-    size_t sz = 0;
-    struct _stack *badS = _createStack(NULL);
+    size_t          sz = 0;
+    struct _stack  *badS = _createStack(NULL);
 
     // Analyzing for bad nodes
     _analyzeGraph(g, n, g->nodes, badS, &sz);
@@ -460,7 +540,7 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
     }
 
     // Recursively running itself
-    struct _stack *returnS = _smallestBadStack(g, n->next);
+    struct _stack  *returnS = _smallestBadStack(g, n->next);
 
     // Returning current bad stack if it's the smallest
     if (sz == g->totalBad)
@@ -482,7 +562,9 @@ static struct _stack *_smallestBadStack(graph g, struct _node *n)
 }
 
 // Removing bad nodes
-static void _removeBadNodes(struct _node *n)
+static void
+_removeBadNodes(
+    struct _node *n)
 {
     if (!n || !n->next)
     {
@@ -494,7 +576,8 @@ static void _removeBadNodes(struct _node *n)
     // Removing nodes without gps data
     if (!n->next->data.gps)
     {
-        struct _node *freeMe = n->next;
+        struct _node   *freeMe = n->next;
+
         n->next = n->next->next;
 
         freeMe->next = NULL;
@@ -503,7 +586,11 @@ static void _removeBadNodes(struct _node *n)
 }
 
 // Printing nodes with low HP
-static void _printLowHP(struct _node *n, int limit, bool isLow)
+static void
+_printLowHP(
+    struct _node *n,
+    int limit,
+    bool isLow)
 {
     if (!n)
     {
@@ -511,7 +598,9 @@ static void _printLowHP(struct _node *n, int limit, bool isLow)
     }
 
     // If the HP percentage is below or equal to the limit
-    if (!n->data.status || ((((float) n->data.status->hp / n->data.status->maxHp) * 100) <= limit))
+    if (!n->data.status ||
+        ((((float) n->data.status->hp / n->data.status->maxHp) * 100) <=
+         limit))
     {
         // If this is the first low HP item
         if (!isLow)
@@ -526,7 +615,10 @@ static void _printLowHP(struct _node *n, int limit, bool isLow)
 }
 
 // Setting GPS info
-static bool _setGPS(struct _node *n,  struct gpsH *gps)
+static bool
+_setGPS(
+    struct _node *n,
+    struct gpsH *gps)
 {
     if (!n || !gps)
     {
@@ -555,7 +647,11 @@ static bool _setGPS(struct _node *n,  struct gpsH *gps)
 }
 
 // Setting the node data
-static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
+static bool
+_setNodeData(
+    struct _node *n,
+    union zergH *zHead,
+    struct gpsH *gps)
 {
     if (!n)
     {
@@ -569,7 +665,7 @@ static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
     if (gps)
     {
 
-        if(_setGPS(n, gps))
+        if (_setGPS(n, gps))
         {
             return true;
         }
@@ -587,7 +683,10 @@ static bool _setNodeData(struct _node *n, union zergH *zHead, struct gpsH *gps)
 }
 
 // Finding and returning a node with the matching id
-static struct _node *_findNode(struct _node *n, unsigned int id)
+static struct _node *
+_findNode(
+    struct _node *n,
+    unsigned int id)
 {
     if (!n)
     {
@@ -605,31 +704,36 @@ static struct _node *_findNode(struct _node *n, unsigned int id)
 }
 
 // Disabling a route for Dijkstra
-static void _disableRoute(struct _node *n)
+static void
+_disableRoute(
+    struct _node *n)
 {
-    if(!n)
+    if (!n)
     {
         return;
     }
 
     // If the node has a parent
-    if(n->parent)
+    if (n->parent)
     {
 
         _setEdgeVisited(n->parent->edges, n);
     }
 
     // If the node has a parent and grand parent
-    if(n->parent && n->parent->parent)
+    if (n->parent && n->parent->parent)
     {
-       n->parent->visited = true;
+        n->parent->visited = true;
     }
 
     _disableRoute(n->parent);
 }
 
 // Checking if the edge and node are adjacent
-static bool _notAdjacent(struct _edge *e, struct _node *n)
+static bool
+_notAdjacent(
+    struct _edge *e,
+    struct _node *n)
 {
     if (!e || !n)
     {
@@ -646,7 +750,9 @@ static bool _notAdjacent(struct _edge *e, struct _node *n)
 }
 
 // Printing bad nodes
-static void _printBadNodes(struct _stack *s)
+static void
+_printBadNodes(
+    struct _stack *s)
 {
     if (!s || !s->node)
     {
@@ -659,9 +765,12 @@ static void _printBadNodes(struct _stack *s)
 }
 
 // Marking the edge as visited
-static void _setEdgeVisited(struct _edge *e, struct _node *n)
+static void
+_setEdgeVisited(
+    struct _edge *e,
+    struct _node *n)
 {
-    if(!e || !n)
+    if (!e || !n)
     {
         return;
     }
@@ -677,7 +786,10 @@ static void _setEdgeVisited(struct _edge *e, struct _node *n)
 }
 
 // Adding a node to the stack
-static void _addToStack(struct _stack *s, struct _node *n)
+static void
+_addToStack(
+    struct _stack *s,
+    struct _node *n)
 {
     if (!s || !n)
     {
@@ -701,9 +813,12 @@ static void _addToStack(struct _stack *s, struct _node *n)
 }
 
 // Creating and returning a stack
-static struct _stack *_createStack(struct _node *n)
+static struct _stack *
+_createStack(
+    struct _node *n)
 {
-    struct _stack *s = calloc(1, sizeof(*s));
+    struct _stack  *s = calloc(1, sizeof(*s));
+
     if (!s)
     {
         return NULL;
@@ -715,7 +830,10 @@ static struct _stack *_createStack(struct _node *n)
 }
 
 // Verifying if an edge can be made
-static void _validEdge(struct _node *a, struct _node *b)
+static void
+_validEdge(
+    struct _node *a,
+    struct _node *b)
 {
     if (!a || !b || !a->data.gps || !b->data.gps)
     {
@@ -723,7 +841,7 @@ static void _validEdge(struct _node *a, struct _node *b)
     }
 
     // Checking the Altitude Difference
-    double altDiff = a->data.gps->altitude - b->data.gps->altitude;
+    double          altDiff = a->data.gps->altitude - b->data.gps->altitude;
 
     if (altDiff > 15.0000)
     {
@@ -731,7 +849,8 @@ static void _validEdge(struct _node *a, struct _node *b)
     }
 
     // Checking the true distance using Pythagorean theorem
-    double trueDist = sqrt(pow(dist(a->data.gps, b->data.gps), 2) + pow(altDiff, 2));
+    double          trueDist =
+        sqrt(pow(dist(a->data.gps, b->data.gps), 2) + pow(altDiff, 2));
 
     // If the distance is to long
     if (trueDist > 15.0000)
@@ -739,7 +858,7 @@ static void _validEdge(struct _node *a, struct _node *b)
         return;
     }
     // If the distance is to short add it to invalid
-    else if(trueDist <= 1.1430)
+    else if (trueDist <= 1.1430)
     {
         // Setting the invalid item on A
         if (!a->invalid)
@@ -752,7 +871,7 @@ static void _validEdge(struct _node *a, struct _node *b)
         }
 
         // Setting the invalid item on B
-        if(!b->invalid)
+        if (!b->invalid)
         {
             b->invalid = _createStack(a);
         }
@@ -771,7 +890,9 @@ static void _validEdge(struct _node *a, struct _node *b)
 }
 
 // Setting a heavy edge for nodes with 3+ edges
-static void _setHeavyEdges(struct _edge *e)
+static void
+_setHeavyEdges(
+    struct _edge *e)
 {
     if (!e)
     {
@@ -788,7 +909,11 @@ static void _setHeavyEdges(struct _edge *e)
 }
 
 // Adding an edge between nodes
-static void _addEdge(struct _node *a, struct _node *b, double weight)
+static void
+_addEdge(
+    struct _node *a,
+    struct _node *b,
+    double weight)
 {
     if (!a || !b)
     {
@@ -796,7 +921,8 @@ static void _addEdge(struct _node *a, struct _node *b, double weight)
     }
 
     // Making new edge
-    struct _edge *newEdge = calloc(1, sizeof(*newEdge));
+    struct _edge   *newEdge = calloc(1, sizeof(*newEdge));
+
     if (!newEdge)
     {
         return;
@@ -841,7 +967,9 @@ static void _addEdge(struct _node *a, struct _node *b, double weight)
 }
 
 // Freeing a stack
-static void _freeStack(struct _stack *s)
+static void
+_freeStack(
+    struct _stack *s)
 {
     if (!s)
     {
@@ -852,7 +980,11 @@ static void _freeStack(struct _stack *s)
 }
 
 // Dijkstra Algorithm
-static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNodes)
+static void
+_dijktra(
+    struct _stack *stack,
+    struct _edge *edge,
+    size_t * totalNodes)
 {
     if (!edge || !stack || !totalNodes)
     {
@@ -881,7 +1013,7 @@ static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNode
             return;
         }
 
-        if((edge->node->weight - INITWEIGHT) >= 0.00)
+        if ((edge->node->weight - INITWEIGHT) >= 0.00)
         {
             (*totalNodes)++;
         }
@@ -906,7 +1038,10 @@ static void _dijktra(struct _stack *stack, struct _edge *edge, size_t *totalNode
 }
 
 // Reseting the node data
-static void _resetNodes(struct _node *n, bool full)
+static void
+_resetNodes(
+    struct _node *n,
+    bool full)
 {
     if (!n)
     {
@@ -929,7 +1064,9 @@ static void _resetNodes(struct _node *n, bool full)
 }
 
 // Reseting the edge data
-static void _resetEdges(struct _edge *e)
+static void
+_resetEdges(
+    struct _edge *e)
 {
     if (!e)
     {
@@ -942,7 +1079,9 @@ static void _resetEdges(struct _edge *e)
 }
 
 // Freeing Edges
-static void _destroyEdges(struct _edge *e)
+static void
+_destroyEdges(
+    struct _edge *e)
 {
     if (!e)
     {
@@ -954,7 +1093,9 @@ static void _destroyEdges(struct _edge *e)
 }
 
 // Freeing nodes and all their data
-static void _destroyNodes(struct _node *n)
+static void
+_destroyNodes(
+    struct _node *n)
 {
     if (!n)
     {
@@ -964,11 +1105,11 @@ static void _destroyNodes(struct _node *n)
     _destroyEdges(n->edges);
     _destroyNodes(n->next);
 
-    if(n->data.status)
+    if (n->data.status)
     {
         free(n->data.status);
     }
-    if(n->data.gps)
+    if (n->data.gps)
     {
         free(n->data.gps);
     }

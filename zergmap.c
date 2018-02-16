@@ -11,23 +11,26 @@
 #include "graph.h"
 
 // Main Function for the program
-int main(int argc, char *argv[])
+int
+main(
+    int argc,
+    char *argv[])
 {
     // Initializing Variables
-    FILE *fp;
+    FILE           *fp;
     struct pcapPacketH ppHeader;
-    union zergH zHeader;
-    struct gpsH zGPS;
-    struct statusH zStatus;
-    int err = 0;
-    int swap = 0;
-    long int dataLength = 0;
-    unsigned int skipBytes = 0;
+    union zergH     zHeader;
+    struct gpsH     zGPS;
+    struct statusH  zStatus;
+    int             err = 0;
+    int             swap = 0;
+    long int        dataLength = 0;
+    unsigned int    skipBytes = 0;
 
     // Setting getopt to not display errors
     opterr = 0;
-    int optCode;
-    int minHp = 10;
+    int             optCode;
+    int             minHp = 10;
 
     // Looping through each flag
     while ((optCode = getopt(argc, argv, "h:")) != -1)
@@ -44,14 +47,15 @@ int main(int argc, char *argv[])
     }
 
     // Checking for valid amount for args
-    if((argc - optind) == 0)
+    if ((argc - optind) == 0)
     {
         fprintf(stderr, "Invalid amount of args\n");
         return 1;
     }
 
     // Creating the graph
-    graph zergGraph = graphCreate();
+    graph           zergGraph = graphCreate();
+
     if (!zergGraph)
     {
         return 1;
@@ -62,7 +66,7 @@ int main(int argc, char *argv[])
     {
         // Attempting to open the file given
         fp = fopen(argv[i], "r");
-        if(fp == NULL)
+        if (fp == NULL)
         {
             fprintf(stderr, "Unable to open the file: %s\n", argv[1]);
             graphDestroy(zergGraph);
@@ -77,63 +81,63 @@ int main(int argc, char *argv[])
         }
 
         // Main reading loop
-        while(setPacketHead(fp, &ppHeader, swap))
+        while (setPacketHead(fp, &ppHeader, swap))
         {
             skipBytes = ppHeader.length;
             dataLength = ftell(fp);
 
             // Validating the Ethernet and IP headers
-            if(invalidEthOrIp(fp, ppHeader.length, &skipBytes))
+            if (invalidEthOrIp(fp, ppHeader.length, &skipBytes))
             {
                 continue;
             }
 
             // Validating the UDP and Zerg Header
-            if(invalidZergHeader(fp, &zHeader, &skipBytes))
+            if (invalidZergHeader(fp, &zHeader, &skipBytes))
             {
                 continue;
             }
 
             // Printing the correct payload
-            switch(getZType(&zHeader))
+            switch (getZType(&zHeader))
             {
-                case 1:
-                    // Adding a status to the graph
-                    setZStatus(fp, &zStatus, sizeof(zStatus));
-                    err = graphAddStatus(zergGraph, zHeader, zStatus);
-                    break;
-                case 3:
-                    // Adding a Zerg to the graph
-                    setZGPS(fp, &zGPS, sizeof(zGPS));
-                    err = graphAddNode(zergGraph, zHeader, &zGPS);
-                    break;
+            case 1:
+                // Adding a status to the graph
+                setZStatus(fp, &zStatus, sizeof(zStatus));
+                err = graphAddStatus(zergGraph, zHeader, zStatus);
+                break;
+            case 3:
+                // Adding a Zerg to the graph
+                setZGPS(fp, &zGPS, sizeof(zGPS));
+                err = graphAddNode(zergGraph, zHeader, &zGPS);
+                break;
 
-                default:
-                    fprintf(stderr, "Invalid Zerg payload, Skipping packet\n");
+            default:
+                fprintf(stderr, "Invalid Zerg payload, Skipping packet\n");
             }
 
             // Checking if there were any errors in printing
-            if(err == 2)
+            if (err == 2)
             {
-                fprintf(stderr, "Duplicate Zerg Ids! Exiting...\n"); 
+                fprintf(stderr, "Duplicate Zerg Ids! Exiting...\n");
                 break;
             }
-            else if(err > 0)
+            else if (err > 0)
             {
                 fprintf(stderr, "A payload error occurred, Skipping packet\n");
             }
 
             // Reading any extra data 
             dataLength = (ftell(fp) - dataLength);
-            if(dataLength != ppHeader.length)
+            if (dataLength != ppHeader.length)
             {
                 skipAhead(fp, 0, "", (ppHeader.length - dataLength));
             }
 
         }
-        
+
         fclose(fp);
-        if(err == 2)
+        if (err == 2)
         {
             graphDestroy(zergGraph);
             return 2;
