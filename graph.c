@@ -283,7 +283,7 @@ int graphAddStatus(graph g, union zergH zHead, struct statusH status)
     return err;
 }
 
-// Analyzing the map for bad nodes
+// Analyzing the graph for bad nodes
 void graphAnalyzeGraph(graph g)
 {
     if (!g || !g->nodes)

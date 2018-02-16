@@ -10,6 +10,7 @@
 #include "util.h"
 #include "graph.h"
 
+// Main Function for the program
 int main(int argc, char *argv[])
 {
     // Initializing Variables
