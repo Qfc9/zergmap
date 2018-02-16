@@ -11,8 +11,10 @@
 
 #define MINPCAPLENGTH 54
 
+// Reads IPV6 data and returns true if it's invalid
 static bool _readIPV6(FILE *fp, unsigned int *skipBytes);
 
+// Reading in PCAP header and returning true if it's invalid 
 bool invalidPCAPHeader(FILE *fp, int *swap)
 {
     struct pcapFileH pHeader;
@@ -34,6 +36,7 @@ bool invalidPCAPHeader(FILE *fp, int *swap)
     return false;
 }
 
+// Reading in Zerg Header and returning true if header is invalid
 bool invalidZergHeader(FILE *fp, union zergH *zHeader, unsigned int *skipBytes)
 {
     struct udpH udpHeader;
@@ -58,6 +61,7 @@ bool invalidZergHeader(FILE *fp, union zergH *zHeader, unsigned int *skipBytes)
     return false;
 }
 
+// Reading in ethernet and ip headers and returning true if something is invalid
 bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
 {
     union ethernetH eHeader;
@@ -120,8 +124,10 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
             }
         }
 
+        // Checking for 6in4
         if (ipHeader.proto == IP6INIP4)
         {
+            // Reading in IPV6
             if(_readIPV6(fp, skipBytes))
             {
                 return true;
@@ -131,6 +137,7 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
     // Checking if it is IPv6
     else if(eHeader.ethInfo.type == ETHIPV6)
     {
+        // Reading in IPV6
         if(_readIPV6(fp, skipBytes))
         {
             return true;
@@ -146,6 +153,7 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
     return false;
 }
 
+// Reads IPV6 data and returns true if it's invalid
 static bool _readIPV6(FILE *fp, unsigned int *skipBytes)
 {
     struct ipv6H ip6Header;
