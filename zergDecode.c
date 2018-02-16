@@ -11,6 +11,8 @@
 
 #define MINPCAPLENGTH 54
 
+static bool _readIPV6(FILE *fp, unsigned int *skipBytes);
+
 bool invalidPCAPHeader(FILE *fp, int *swap)
 {
     struct pcapFileH pHeader;
@@ -60,7 +62,6 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
 {
     union ethernetH eHeader;
     struct ipv4H ipHeader;
-    struct ipv6H ip6Header;
 
     // Checking if packet is of a valid length
     if(ppLength < MINPCAPLENGTH)
@@ -98,7 +99,7 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
         (*skipBytes) -= sizeof(ipHeader);
 
         // Checking if valid IP Header
-        if(ipHeader.version != IPV4 || ipHeader.proto != UDP || ipHeader.ihl < IHLDEFAULT)
+        if(ipHeader.version != IPV4 || (ipHeader.proto != UDP && ipHeader.proto != IP6INIP4) || ipHeader.ihl < IHLDEFAULT)
         {
             skipAhead(fp, 1, "Invalid IPv4 Header", (*skipBytes));
             return true;
@@ -118,18 +119,20 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
                 return true;
             }
         }
+
+        if (ipHeader.proto == IP6INIP4)
+        {
+            if(_readIPV6(fp, skipBytes))
+            {
+                return true;
+            }
+        }
     }
     // Checking if it is IPv6
     else if(eHeader.ethInfo.type == ETHIPV6)
     {
-        //ip6Header
-        setIPv6Head(fp, &ip6Header, "IPv6 Header");
-        (*skipBytes) -= sizeof(ip6Header);
-
-        // Checking if valid IP Header
-        if(ip6Header.nextHead != UDP)
+        if(_readIPV6(fp, skipBytes))
         {
-            skipAhead(fp, 1, "Invalid Transport Layer protocol", (*skipBytes));
             return true;
         }
     }
@@ -138,6 +141,23 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
         skipAhead(fp, 1, "Invalid Ethernet Header Type", (*skipBytes));
         return true;
 
+    }
+
+    return false;
+}
+
+static bool _readIPV6(FILE *fp, unsigned int *skipBytes)
+{
+    struct ipv6H ip6Header;
+    //ip6Header
+    setIPv6Head(fp, &ip6Header, "IPv6 Header");
+    (*skipBytes) -= sizeof(ip6Header);
+
+    // Checking if valid IP Header
+    if(ip6Header.nextHead != UDP)
+    {
+        skipAhead(fp, 1, "Invalid Transport Layer protocol", (*skipBytes));
+        return true;
     }
 
     return false;

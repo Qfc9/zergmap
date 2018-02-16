@@ -42,7 +42,6 @@ void setIPv6Head(FILE *fp, struct ipv6H *ipHead, const char *msg)
 void setIPv4Head(FILE *fp, struct ipv4H *ipHead, const char *msg)
 {
     safeRead(fp, ipHead, sizeof(*ipHead), msg);
-    ipHead->proto = u8BitSwap(ipHead->proto);
 }
 
 // Setting Ethernet header
