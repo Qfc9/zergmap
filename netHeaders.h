@@ -17,6 +17,7 @@
 
 #define IPV4 0x4
 #define UDP 0x11
+#define IP6INIP4 0x29
 #define IHLDEFAULT 0x5
 
 struct pcapFileH

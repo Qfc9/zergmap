@@ -98,7 +98,7 @@ bool invalidEthOrIp(FILE *fp, unsigned int ppLength, unsigned int *skipBytes)
         (*skipBytes) -= sizeof(ipHeader);
 
         // Checking if valid IP Header
-        if(ipHeader.version != IPV4 || ipHeader.proto != UDP || ipHeader.ihl < IHLDEFAULT)
+        if(ipHeader.version != IPV4 || (ipHeader.proto != UDP && ipHeader.proto != IP6INIP4) || ipHeader.ihl < IHLDEFAULT)
         {
             skipAhead(fp, 1, "Invalid IPv4 Header", (*skipBytes));
             return true;
